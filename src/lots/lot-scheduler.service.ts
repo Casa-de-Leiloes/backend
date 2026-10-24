@@ -1,0 +1,77 @@
+import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
+import { Queue, Worker, type Job } from "bullmq";
+import type Redis from "ioredis";
+import { Inject } from "@nestjs/common";
+import { REDIS_CLIENT } from "../redis/redis.constants";
+import { PrismaService } from "../prisma/prisma.service";
+import { SettlementService } from "../settlement/settlement.service";
+
+const QUEUE_NAME = "lot-lifecycle";
+
+interface LotJobData {
+  lotId: string;
+  action: "open" | "close";
+}
+
+@Injectable()
+export class LotSchedulerService implements OnModuleInit, OnModuleDestroy {
+  private queue!: Queue<LotJobData>;
+  private worker!: Worker<LotJobData>;
+
+  constructor(
+    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    private readonly prisma: PrismaService,
+    private readonly settlementService: SettlementService,
+  ) {}
+
+  onModuleInit() {
+    const redisUrl = process.env["REDIS_URL"] ?? "redis://localhost:6379";
+    const connection = { url: redisUrl, maxRetriesPerRequest: null as null };
+    this.queue = new Queue<LotJobData>(QUEUE_NAME, { connection });
+
+    this.worker = new Worker<LotJobData>(
+      QUEUE_NAME,
+      async (job: Job<LotJobData>) => {
+        const { lotId, action } = job.data;
+        if (action === "open") {
+          await this.prisma.lot.updateMany({
+            where: { id: lotId, status: "SCHEDULED" },
+            data: { status: "LIVE" },
+          });
+        } else if (action === "close") {
+          await this.prisma.lot.updateMany({
+            where: { id: lotId, status: "LIVE" },
+            data: { status: "CLOSED" },
+          });
+          try {
+            await this.settlementService.settleLot(lotId);
+          } catch {
+            // no bids — lot already marked closed
+          }
+        }
+      },
+      { connection, autorun: true },
+    );
+  }
+
+  async onModuleDestroy() {
+    await this.worker.close();
+    await this.queue.close();
+  }
+
+  async scheduleLot(lotId: string, startsAt: Date, endsAt: Date): Promise<void> {
+    const now = Date.now();
+    const openDelay = Math.max(0, startsAt.getTime() - now);
+    const closeDelay = Math.max(0, endsAt.getTime() - now);
+
+    await this.queue.add("open", { lotId, action: "open" }, { delay: openDelay, jobId: `open-${lotId}` });
+    await this.queue.add("close", { lotId, action: "close" }, { delay: closeDelay, jobId: `close-${lotId}` });
+  }
+
+  async rescheduleClose(lotId: string, endsAt: Date): Promise<void> {
+    const job = await this.queue.getJob(`close-${lotId}`);
+    if (job) await job.remove();
+    const delay = Math.max(0, endsAt.getTime() - Date.now());
+    await this.queue.add("close", { lotId, action: "close" }, { delay, jobId: `close-${lotId}` });
+  }
+}
