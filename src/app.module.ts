@@ -2,6 +2,7 @@ import { Module } from "@nestjs/common";
 import { ConfigModule } from "@nestjs/config";
 import { validateEnv } from "./config/env.schema";
 import { HealthModule } from "./health/health.module";
+import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./redis/redis.module";
 
 @Module({
@@ -11,6 +12,7 @@ import { RedisModule } from "./redis/redis.module";
       validate: validateEnv,
     }),
     RedisModule,
+    PrismaModule,
     HealthModule,
   ],
 })
