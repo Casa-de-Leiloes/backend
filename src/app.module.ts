@@ -6,6 +6,7 @@ import { HealthModule } from "./health/health.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./redis/redis.module";
 import { WalletModule } from "./wallet/wallet.module";
+import { CatalogModule } from "./catalog/catalog.module";
 
 @Module({
   imports: [
@@ -17,6 +18,7 @@ import { WalletModule } from "./wallet/wallet.module";
     PrismaModule,
     AuthModule,
     WalletModule,
+    CatalogModule,
     HealthModule,
   ],
 })
