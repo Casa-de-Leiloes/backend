@@ -1,0 +1,86 @@
+name: CI
+
+on:
+  pull_request:
+    branches: [master, develop]
+  push:
+    branches: [develop]
+
+jobs:
+  quality:
+    name: Lint, Type Check & Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:16-alpine
+        env:
+          POSTGRES_USER: auction
+          POSTGRES_PASSWORD: auction
+          POSTGRES_DB: auction_house_test
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7-alpine
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: '1.4.0'
+
+      - name: Install dependencies
+        run: bun install --frozen-lockfile
+
+      - name: Lint (Biome)
+        run: bunx biome ci .
+
+      - name: Type check
+        run: bunx tsc --noEmit
+
+      - name: Generate Prisma client
+        run: bunx prisma generate
+
+      - name: Run migrations
+        run: bunx prisma migrate deploy
+        env:
+          DATABASE_URL: postgresql://auction:auction@localhost:5432/auction_house_test
+
+      - name: Run tests with coverage
+        run: bunx jest --config jest.config.ts --coverage
+        env:
+          NODE_ENV: test
+          DATABASE_URL: postgresql://auction:auction@localhost:5432/auction_house_test
+          REDIS_URL: redis://localhost:6379
+          FERNET_KEYS: dGVzdC1mZXJuZXQta2V5LTMyLWJ5dGVzLWhlcmUhISE=
+          EMAIL_LOOKUP_KEY: test-email-lookup-key-min-32-chars-here
+          PSEUDONYM_KEY: test-pseudonym-key-min-32-chars-here-ok
+          AUDIT_SIGNING_KEY: test-audit-signing-key-min-32-chars-here
+          BETTER_AUTH_SECRET: test-better-auth-secret-min-32-chars-ok
+          BETTER_AUTH_URL: http://localhost:3000
+          PASSKEY_RP_ID: localhost
+          PASSKEY_ORIGIN: http://localhost:5173
+          FRONTEND_ORIGIN: http://localhost:5173
+
+  docker:
+    name: Docker Build
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Build Docker image
+        run: docker build -t auction-house-backend:ci .

@@ -1,0 +1,10 @@
+node_modules/
+dist/
+.env
+.env.local
+.env.homolog
+.env.prod
+coverage/
+.superpowers/
+*.log
+prisma/migrations/dev.db
