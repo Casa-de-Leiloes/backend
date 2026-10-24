@@ -9,6 +9,7 @@ import { WalletModule } from "./wallet/wallet.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { LotsModule } from "./lots/lots.module";
 import { BidsModule } from "./bids/bids.module";
+import { UsersModule } from "./users/users.module";
 
 @Module({
   imports: [
@@ -23,6 +24,7 @@ import { BidsModule } from "./bids/bids.module";
     CatalogModule,
     LotsModule,
     BidsModule,
+    UsersModule,
     HealthModule,
   ],
 })

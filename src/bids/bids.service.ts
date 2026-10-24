@@ -98,4 +98,28 @@ export class BidsService {
       orderBy: { sequence: "asc" },
     });
   }
+
+  async getMyBids(bidderId: string, cursor?: string, limit = 20): Promise<{ items: Bid[]; nextCursor: string | null }> {
+    const items = await this.prisma.bid.findMany({
+      where: { bidderId },
+      orderBy: { placedAt: "desc" },
+      take: limit + 1,
+      ...(cursor ? { skip: 1, cursor: { id: cursor } } : {}),
+    });
+    const hasNext = items.length > limit;
+    if (hasNext) items.pop();
+    return { items, nextCursor: hasNext ? (items[items.length - 1]?.id ?? null) : null };
+  }
+
+  async getMyWins(bidderId: string): Promise<Array<{ lotId: string; amountCents: bigint; receiptToken: string | null }>> {
+    const receipts = await this.prisma.receipt.findMany({
+      where: { winnerId: bidderId },
+      orderBy: { issuedAt: "desc" },
+    });
+    return receipts.map((r) => ({
+      lotId: r.lotId,
+      amountCents: r.amountCents,
+      receiptToken: r.publicToken,
+    }));
+  }
 }
