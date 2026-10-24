@@ -1,14 +1,14 @@
-import { Injectable } from "@nestjs/common";
 import { createHmac, randomBytes } from "node:crypto";
+import { Injectable } from "@nestjs/common";
 import type { Receipt } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
+import type { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class SettlementService {
   private readonly signingKey: string;
 
   constructor(private readonly prisma: PrismaService) {
-    this.signingKey = process.env["AUDIT_SIGNING_KEY"] ?? "";
+    this.signingKey = process.env.AUDIT_SIGNING_KEY ?? "";
   }
 
   async settleLot(lotId: string): Promise<Receipt> {
@@ -35,8 +35,12 @@ export class SettlementService {
         .update(`${lotId}|${lot.leadingBidderId}|${lot.currentBidCents}|${publicToken}`)
         .digest("hex");
 
-      const winnerWallet = await tx.wallet.findUniqueOrThrow({ where: { userId: lot.leadingBidderId } });
-      const auctioneerWallet = await tx.wallet.findUniqueOrThrow({ where: { userId: lot.auctioneerId } });
+      const winnerWallet = await tx.wallet.findUniqueOrThrow({
+        where: { userId: lot.leadingBidderId },
+      });
+      const auctioneerWallet = await tx.wallet.findUniqueOrThrow({
+        where: { userId: lot.auctioneerId },
+      });
 
       await tx.wallet.update({
         where: { id: winnerWallet.id },
@@ -46,7 +50,12 @@ export class SettlementService {
         },
       });
       await tx.walletLedgerEntry.create({
-        data: { walletId: winnerWallet.id, kind: "SETTLEMENT_DEBIT", amountCents: lot.currentBidCents, lotId },
+        data: {
+          walletId: winnerWallet.id,
+          kind: "SETTLEMENT_DEBIT",
+          amountCents: lot.currentBidCents,
+          lotId,
+        },
       });
 
       await tx.wallet.update({
@@ -54,7 +63,12 @@ export class SettlementService {
         data: { totalCents: { increment: lot.currentBidCents } },
       });
       await tx.walletLedgerEntry.create({
-        data: { walletId: auctioneerWallet.id, kind: "SETTLEMENT_CREDIT", amountCents: lot.currentBidCents, lotId },
+        data: {
+          walletId: auctioneerWallet.id,
+          kind: "SETTLEMENT_CREDIT",
+          amountCents: lot.currentBidCents,
+          lotId,
+        },
       });
 
       const receipt = await tx.receipt.create({

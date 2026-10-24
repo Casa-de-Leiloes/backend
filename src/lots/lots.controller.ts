@@ -1,26 +1,26 @@
 import {
-  Controller,
-  Get,
-  Post,
-  Delete,
-  Param,
+  BadRequestException,
   Body,
+  Controller,
+  DefaultValuePipe,
+  Delete,
+  Get,
+  NotFoundException,
+  Param,
+  ParseIntPipe,
+  Post,
   Query,
   Req,
   UseGuards,
-  ParseIntPipe,
-  DefaultValuePipe,
-  BadRequestException,
-  NotFoundException,
 } from "@nestjs/common";
 import type { Request } from "express";
 import { z } from "zod";
-import { SessionGuard } from "../auth/session.guard";
+import type { BetterAuthUser } from "../auth/auth.types";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
-import { LotsService } from "./lots.service";
-import { CatalogService } from "../catalog/catalog.service";
-import type { BetterAuthUser } from "../auth/auth.types";
+import { SessionGuard } from "../auth/session.guard";
+import type { CatalogService } from "../catalog/catalog.service";
+import type { LotsService } from "./lots.service";
 
 const createLotSchema = z.object({
   snapshotId: z.string().optional(),
@@ -91,11 +91,16 @@ export class LotsController {
     @Query("cursor") cursor?: string,
   ) {
     const validStatuses = ["SCHEDULED", "LIVE", "CLOSED", "CANCELLED"];
-    const lotStatus = status && validStatuses.includes(status)
-      ? (status as "SCHEDULED" | "LIVE" | "CLOSED" | "CANCELLED")
-      : undefined;
+    const lotStatus =
+      status && validStatuses.includes(status)
+        ? (status as "SCHEDULED" | "LIVE" | "CLOSED" | "CANCELLED")
+        : undefined;
 
-    const page = await this.lotsService.list({ status: lotStatus, limit: Math.min(limit, 100), cursor });
+    const page = await this.lotsService.list({
+      status: lotStatus,
+      limit: Math.min(limit, 100),
+      cursor,
+    });
     return {
       items: page.items.map(serializeLot),
       nextCursor: page.nextCursor,

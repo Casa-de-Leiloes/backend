@@ -1,10 +1,10 @@
 import { Injectable } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import type { ConfigService } from "@nestjs/config";
 import type { Request } from "express";
 import type { AppEnv } from "../config/env.schema";
-import { PrismaService } from "../prisma/prisma.service";
-import { createBetterAuth, type BetterAuthInstance } from "./better-auth.config";
-import { IdentityService } from "./identity.service";
+import type { PrismaService } from "../prisma/prisma.service";
+import { type BetterAuthInstance, createBetterAuth } from "./better-auth.config";
+import type { IdentityService } from "./identity.service";
 
 @Injectable()
 export class AuthService {

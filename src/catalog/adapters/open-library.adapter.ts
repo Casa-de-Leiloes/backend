@@ -57,10 +57,7 @@ export class OpenLibraryAdapter implements CatalogProvider {
     const res = await fetch(url, { headers: { "User-Agent": "AuctionHouse/1.0" } });
     if (!res.ok) throw new Error(`Open Library work ${id} not found`);
     const w = (await res.json()) as OpenLibraryWork;
-    const desc =
-      typeof w.description === "string"
-        ? w.description
-        : (w.description?.value ?? "");
+    const desc = typeof w.description === "string" ? w.description : (w.description?.value ?? "");
     return {
       providerId: workId(w.key),
       provider: "OPEN_LIBRARY",

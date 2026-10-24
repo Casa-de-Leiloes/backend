@@ -15,10 +15,7 @@ interface ScryfallCard {
 }
 
 function toItem(c: ScryfallCard): CatalogItem {
-  const imageUrl =
-    c.image_uris?.normal ??
-    c.card_faces?.[0]?.image_uris?.normal ??
-    null;
+  const imageUrl = c.image_uris?.normal ?? c.card_faces?.[0]?.image_uris?.normal ?? null;
 
   return {
     providerId: c.id,

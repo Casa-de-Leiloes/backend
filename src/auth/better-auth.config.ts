@@ -1,7 +1,7 @@
+import type { PrismaClient } from "@prisma/client";
+import * as argon2 from "argon2";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import * as argon2 from "argon2";
-import type { PrismaClient } from "@prisma/client";
 import type { IdentityService } from "./identity.service";
 
 export function createBetterAuth(
@@ -55,7 +55,8 @@ export function createBetterAuth(
       user: {
         create: {
           before: async (user) => {
-            const rawEmail: string = (user as unknown as Record<string, unknown>)["_rawEmail"] as string ?? user.email;
+            const rawEmail: string =
+              ((user as unknown as Record<string, unknown>)._rawEmail as string) ?? user.email;
             return {
               data: {
                 ...user,
@@ -66,7 +67,7 @@ export function createBetterAuth(
             };
           },
           after: async (user) => {
-            const role = (user as unknown as Record<string, unknown>)["role"] as string | undefined;
+            const role = (user as unknown as Record<string, unknown>).role as string | undefined;
             if (role === "BIDDER") {
               await prisma.wallet.create({
                 data: { userId: user.id, totalCents: 0n, committedCents: 0n },

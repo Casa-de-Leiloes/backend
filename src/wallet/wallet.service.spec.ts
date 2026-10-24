@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing";
-import { WalletService } from "./wallet.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { WalletService } from "./wallet.service";
 
 const mockWallet = {
   id: "wallet-1",
@@ -29,10 +29,7 @@ describe("WalletService", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module = await Test.createTestingModule({
-      providers: [
-        WalletService,
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
+      providers: [WalletService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
     svc = module.get(WalletService);
   });
@@ -55,7 +52,9 @@ describe("WalletService", () => {
   describe("deposit", () => {
     it("adds to totalCents and writes ledger entry", async () => {
       const updated = { ...mockWallet, totalCents: 15000n };
-      mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma));
+      mockPrisma.$transaction.mockImplementation(
+        async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma),
+      );
       mockPrisma.wallet.update.mockResolvedValue(updated);
       mockPrisma.walletLedgerEntry.create.mockResolvedValue({});
 
@@ -63,7 +62,11 @@ describe("WalletService", () => {
       expect(result.totalCents).toBe(15000n);
       expect(mockPrisma.walletLedgerEntry.create).toHaveBeenCalledWith(
         expect.objectContaining({
-          data: expect.objectContaining({ kind: "DEPOSIT", amountCents: 5000n, walletId: "wallet-1" }),
+          data: expect.objectContaining({
+            kind: "DEPOSIT",
+            amountCents: 5000n,
+            walletId: "wallet-1",
+          }),
         }),
       );
     });
@@ -77,7 +80,9 @@ describe("WalletService", () => {
   describe("commit / release", () => {
     it("commit moves available to committed", async () => {
       const updated = { ...mockWallet, committedCents: 5000n };
-      mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma));
+      mockPrisma.$transaction.mockImplementation(
+        async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma),
+      );
       mockPrisma.wallet.findUniqueOrThrow.mockResolvedValue(mockWallet);
       mockPrisma.wallet.update.mockResolvedValue(updated);
       mockPrisma.walletLedgerEntry.create.mockResolvedValue({});
@@ -91,13 +96,17 @@ describe("WalletService", () => {
     });
 
     it("commit throws when insufficient available balance", async () => {
-      mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma));
+      mockPrisma.$transaction.mockImplementation(
+        async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma),
+      );
       mockPrisma.wallet.findUniqueOrThrow.mockResolvedValue(mockWallet); // available = 7000n
       await expect(svc.commit("wallet-1", 8000n, "lot-1")).rejects.toThrow("INSUFFICIENT_BALANCE");
     });
 
     it("release decrements committedCents", async () => {
-      mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma));
+      mockPrisma.$transaction.mockImplementation(
+        async (fn: (tx: typeof mockPrisma) => Promise<unknown>) => fn(mockPrisma),
+      );
       mockPrisma.wallet.findUniqueOrThrow.mockResolvedValue(mockWallet);
       mockPrisma.wallet.update.mockResolvedValue(mockWallet);
       mockPrisma.walletLedgerEntry.create.mockResolvedValue({});
@@ -114,7 +123,15 @@ describe("WalletService", () => {
   describe("getLedger", () => {
     it("returns entries ordered by createdAt desc", async () => {
       const entries = [
-        { id: "e1", walletId: "wallet-1", kind: "DEPOSIT", amountCents: 5000n, lotId: null, bidId: null, createdAt: new Date() },
+        {
+          id: "e1",
+          walletId: "wallet-1",
+          kind: "DEPOSIT",
+          amountCents: 5000n,
+          lotId: null,
+          bidId: null,
+          createdAt: new Date(),
+        },
       ];
       mockPrisma.walletLedgerEntry.findMany.mockResolvedValue(entries);
       const result = await svc.getLedger("wallet-1", 10, undefined);

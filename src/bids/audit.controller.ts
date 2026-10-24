@@ -1,6 +1,6 @@
-import { Controller, Get, Param, NotFoundException } from "@nestjs/common";
-import { BidsService } from "./bids.service";
+import { Controller, Get, NotFoundException, Param } from "@nestjs/common";
 import { verifyBidChain } from "./bid-chain";
+import type { BidsService } from "./bids.service";
 
 @Controller("lots/:lotId/audit")
 export class AuditController {

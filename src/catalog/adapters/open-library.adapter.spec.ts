@@ -62,6 +62,8 @@ describe("OpenLibraryAdapter", () => {
 
   it("fetchById throws on 404", async () => {
     mockFetch.mockResolvedValue({ ok: false, status: 404 });
-    await expect(adapter.fetchById("OLBADID")).rejects.toThrow("Open Library work OLBADID not found");
+    await expect(adapter.fetchById("OLBADID")).rejects.toThrow(
+      "Open Library work OLBADID not found",
+    );
   });
 });

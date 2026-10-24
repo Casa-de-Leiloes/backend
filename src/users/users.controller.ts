@@ -1,10 +1,18 @@
-import { Controller, Get, Query, Req, UseGuards, ParseIntPipe, DefaultValuePipe } from "@nestjs/common";
+import {
+  Controller,
+  DefaultValuePipe,
+  Get,
+  ParseIntPipe,
+  Query,
+  Req,
+  UseGuards,
+} from "@nestjs/common";
 import type { Request } from "express";
-import { SessionGuard } from "../auth/session.guard";
-import { BidsService } from "../bids/bids.service";
-import { IdentityService } from "../auth/identity.service";
-import { PrismaService } from "../prisma/prisma.service";
 import type { BetterAuthUser } from "../auth/auth.types";
+import type { IdentityService } from "../auth/identity.service";
+import { SessionGuard } from "../auth/session.guard";
+import type { BidsService } from "../bids/bids.service";
+import type { PrismaService } from "../prisma/prisma.service";
 
 @Controller("users/me")
 @UseGuards(SessionGuard)
@@ -58,8 +66,10 @@ export class UsersController {
     let decryptedEmail: string | null = null;
     let decryptedName: string | null = null;
     try {
-      if (dbUser.encryptedEmail) decryptedEmail = this.identityService.decrypt(dbUser.encryptedEmail);
-      if (dbUser.encryptedFullName) decryptedName = this.identityService.decrypt(dbUser.encryptedFullName);
+      if (dbUser.encryptedEmail)
+        decryptedEmail = this.identityService.decrypt(dbUser.encryptedEmail);
+      if (dbUser.encryptedFullName)
+        decryptedName = this.identityService.decrypt(dbUser.encryptedFullName);
     } catch {
       // key rotation edge case — return what we can
     }
@@ -74,7 +84,10 @@ export class UsersController {
         createdAt: dbUser.createdAt,
       },
       wallet: wallet
-        ? { totalCents: wallet.totalCents.toString(), committedCents: wallet.committedCents.toString() }
+        ? {
+            totalCents: wallet.totalCents.toString(),
+            committedCents: wallet.committedCents.toString(),
+          }
         : null,
       bids: bids.items.map((b) => ({
         id: b.id,

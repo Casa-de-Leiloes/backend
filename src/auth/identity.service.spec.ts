@@ -45,7 +45,7 @@ describe("IdentityService", () => {
     it("rejects tampered ciphertext", () => {
       const svc = makeSvc([validKey]);
       const token = svc.encrypt("data");
-      const tampered = token.slice(0, -4) + "XXXX";
+      const tampered = `${token.slice(0, -4)}XXXX`;
       expect(() => svc.decrypt(tampered)).toThrow();
     });
   });

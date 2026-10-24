@@ -1,7 +1,7 @@
 import { Test } from "@nestjs/testing";
-import { BidsService } from "./bids.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { WalletService } from "../wallet/wallet.service";
+import { BidsService } from "./bids.service";
 
 const futureDate = (minutesFromNow: number) => new Date(Date.now() + minutesFromNow * 60_000);
 const pastDate = (minutesAgo: number) => new Date(Date.now() - minutesAgo * 60_000);
@@ -52,7 +52,9 @@ describe("BidsService", () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
-    mockPrisma.$transaction.mockImplementation(async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx));
+    mockPrisma.$transaction.mockImplementation(
+      async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
+    );
     const module = await Test.createTestingModule({
       providers: [
         BidsService,
@@ -65,36 +67,55 @@ describe("BidsService", () => {
 
   it("rejects bid on non-LIVE lot", async () => {
     mockTx.lot.findUnique.mockResolvedValue(makeLot({ status: "SCHEDULED" }));
-    await expect(svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1000n }))
-      .rejects.toThrow("LOT_NOT_LIVE");
+    await expect(
+      svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1000n }),
+    ).rejects.toThrow("LOT_NOT_LIVE");
   });
 
   it("rejects bid on closed (past endsAt) lot", async () => {
     mockTx.lot.findUnique.mockResolvedValue(makeLot({ endsAt: pastDate(1) }));
-    await expect(svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1000n }))
-      .rejects.toThrow("LOT_NOT_LIVE");
+    await expect(
+      svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1000n }),
+    ).rejects.toThrow("LOT_NOT_LIVE");
   });
 
   it("rejects bid below starting bid when no current bid", async () => {
     mockTx.lot.findUnique.mockResolvedValue(makeLot());
-    await expect(svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 500n }))
-      .rejects.toThrow("BID_TOO_LOW");
+    await expect(
+      svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 500n }),
+    ).rejects.toThrow("BID_TOO_LOW");
   });
 
   it("rejects bid below minimum increment over current bid", async () => {
     mockTx.lot.findUnique.mockResolvedValue(makeLot({ currentBidCents: 1000n }));
-    await expect(svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1050n }))
-      .rejects.toThrow("BID_TOO_LOW");
+    await expect(
+      svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1050n }),
+    ).rejects.toThrow("BID_TOO_LOW");
   });
 
   it("accepts first valid bid and updates lot", async () => {
     const lot = makeLot();
     mockTx.lot.findUnique.mockResolvedValue(lot);
-    mockTx.bid.create.mockResolvedValue({ id: "bid-new", lotId: "lot-1", hash: "abc", sequence: 1, previousHash: "genesis", signature: "sig", amountCents: 1000n, bidderId: "user-1", placedAt: new Date() });
+    mockTx.bid.create.mockResolvedValue({
+      id: "bid-new",
+      lotId: "lot-1",
+      hash: "abc",
+      sequence: 1,
+      previousHash: "genesis",
+      signature: "sig",
+      amountCents: 1000n,
+      bidderId: "user-1",
+      placedAt: new Date(),
+    });
     mockTx.lot.update.mockResolvedValue({ ...lot, currentBidCents: 1000n });
     mockWallet.getWalletByUserId.mockResolvedValue({ id: "w-1" });
 
-    const bid = await svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1000n });
+    const bid = await svc.placeBid({
+      lotId: "lot-1",
+      bidderId: "user-1",
+      walletId: "w-1",
+      amountCents: 1000n,
+    });
     expect(bid.id).toBe("bid-new");
     expect(mockTx.lot.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ currentBidCents: 1000n }) }),

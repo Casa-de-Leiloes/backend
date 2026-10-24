@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing";
-import { LotsService } from "./lots.service";
 import { PrismaService } from "../prisma/prisma.service";
+import { LotsService } from "./lots.service";
 
 const mockLot = {
   id: "lot-1",
@@ -41,10 +41,7 @@ describe("LotsService", () => {
   beforeEach(async () => {
     jest.clearAllMocks();
     const module = await Test.createTestingModule({
-      providers: [
-        LotsService,
-        { provide: PrismaService, useValue: mockPrisma },
-      ],
+      providers: [LotsService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
     svc = module.get(LotsService);
   });

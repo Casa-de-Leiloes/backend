@@ -1,17 +1,17 @@
 import { Module } from "@nestjs/common";
-import { APP_GUARD } from "@nestjs/core";
 import { ConfigModule } from "@nestjs/config";
-import { ThrottlerModule, ThrottlerGuard } from "@nestjs/throttler";
-import { validateEnv } from "./config/env.schema";
+import { APP_GUARD } from "@nestjs/core";
+import { ThrottlerGuard, ThrottlerModule } from "@nestjs/throttler";
 import { AuthModule } from "./auth/auth.module";
+import { BidsModule } from "./bids/bids.module";
+import { CatalogModule } from "./catalog/catalog.module";
+import { validateEnv } from "./config/env.schema";
 import { HealthModule } from "./health/health.module";
+import { LotsModule } from "./lots/lots.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./redis/redis.module";
-import { WalletModule } from "./wallet/wallet.module";
-import { CatalogModule } from "./catalog/catalog.module";
-import { LotsModule } from "./lots/lots.module";
-import { BidsModule } from "./bids/bids.module";
 import { UsersModule } from "./users/users.module";
+import { WalletModule } from "./wallet/wallet.module";
 
 @Module({
   providers: [{ provide: APP_GUARD, useClass: ThrottlerGuard }],

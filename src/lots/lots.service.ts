@@ -1,6 +1,6 @@
-import { Injectable, ForbiddenException } from "@nestjs/common";
-import type { Lot, LotStatus, CatalogProvider } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
+import { ForbiddenException, Injectable } from "@nestjs/common";
+import type { CatalogProvider, Lot, LotStatus } from "@prisma/client";
+import type { PrismaService } from "../prisma/prisma.service";
 
 export interface CreateLotInput {
   auctioneerId: string;
@@ -84,7 +84,10 @@ export class LotsService {
         });
       }
 
-      return tx.lot.update({ where: { id: lotId }, data: { status: "CANCELLED", closedAt: new Date() } });
+      return tx.lot.update({
+        where: { id: lotId },
+        data: { status: "CANCELLED", closedAt: new Date() },
+      });
     });
   }
 
@@ -97,15 +100,27 @@ export class LotsService {
     });
 
     if (bids.length === 0) {
-      return { rank: null, lastBidCents: null, currentPriceCents: lot.currentBidCents, gapToLeadCents: null, isLeading: false };
+      return {
+        rank: null,
+        lastBidCents: null,
+        currentPriceCents: lot.currentBidCents,
+        gapToLeadCents: null,
+        isLeading: false,
+      };
     }
 
     const myBids = bids.filter((b) => b.bidderId === bidderId);
     if (myBids.length === 0) {
-      return { rank: null, lastBidCents: null, currentPriceCents: lot.currentBidCents, gapToLeadCents: null, isLeading: false };
+      return {
+        rank: null,
+        lastBidCents: null,
+        currentPriceCents: lot.currentBidCents,
+        gapToLeadCents: null,
+        isLeading: false,
+      };
     }
 
-    const lastBidCents = myBids[0]!.amountCents;
+    const lastBidCents = myBids[0]?.amountCents ?? null;
 
     const uniqueBidders = [...new Set(bids.map((b) => b.bidderId))];
     const bidderHighest = new Map<string, bigint>();
@@ -119,25 +134,21 @@ export class LotsService {
     const sorted = [...bidderHighest.entries()].sort((a, b) => (b[1] > a[1] ? 1 : -1));
     const rank = sorted.findIndex(([id]) => id === bidderId) + 1;
     const isLeading = rank === 1;
-    const leadAmount = sorted[0]![1];
+    const leadAmount = sorted[0]?.[1];
     const myAmount = bidderHighest.get(bidderId) ?? 0n;
-    const gapToLeadCents = isLeading ? 0n : leadAmount - myAmount;
+    const gapToLeadCents = isLeading ? 0n : (leadAmount ?? 0n) - myAmount;
 
+    void uniqueBidders;
     return {
       rank,
       lastBidCents,
-      currentPriceCents: lot.currentBidCents,
+      currentPriceCents: lot.currentBidCents ?? null,
       gapToLeadCents,
       isLeading,
     };
-    void uniqueBidders;
   }
 
-  async list(opts: {
-    status?: LotStatus;
-    cursor?: string;
-    limit: number;
-  }): Promise<LotPage> {
+  async list(opts: { status?: LotStatus; cursor?: string; limit: number }): Promise<LotPage> {
     const items = await this.prisma.lot.findMany({
       where: opts.status ? { status: opts.status } : undefined,
       orderBy: { endsAt: "asc" },

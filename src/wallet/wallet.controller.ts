@@ -1,22 +1,22 @@
 import {
-  Controller,
-  Get,
-  Post,
+  BadRequestException,
   Body,
+  Controller,
+  DefaultValuePipe,
+  Get,
+  ParseIntPipe,
+  Post,
   Query,
   Req,
   UseGuards,
-  ParseIntPipe,
-  DefaultValuePipe,
-  BadRequestException,
 } from "@nestjs/common";
 import type { Request } from "express";
 import { z } from "zod";
-import { SessionGuard } from "../auth/session.guard";
+import type { BetterAuthUser } from "../auth/auth.types";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
-import { WalletService } from "./wallet.service";
-import type { BetterAuthUser } from "../auth/auth.types";
+import { SessionGuard } from "../auth/session.guard";
+import type { WalletService } from "./wallet.service";
 
 const depositBodySchema = z.object({
   amountCents: z.number().int().positive(),

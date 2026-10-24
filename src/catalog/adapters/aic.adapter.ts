@@ -2,7 +2,8 @@ import type { CatalogItem, CatalogProvider } from "../catalog.types";
 
 const AIC_BASE = "https://api.artic.edu/api/v1";
 const AIC_IMAGE_BASE = "https://www.artic.edu/iiif/2";
-const FIELDS = "id,title,description,image_id,artist_display,date_display,medium_display,dimensions";
+const FIELDS =
+  "id,title,description,image_id,artist_display,date_display,medium_display,dimensions";
 
 interface AicArtwork {
   id: number;

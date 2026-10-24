@@ -1,24 +1,23 @@
 import {
+  BadRequestException,
+  Body,
   Controller,
-  Post,
   Get,
   Param,
-  Body,
+  Post,
   Req,
-  Res,
-  UseGuards,
-  BadRequestException,
   Sse,
+  UseGuards,
 } from "@nestjs/common";
-import type { Request, Response } from "express";
-import { Observable, Subject } from "rxjs";
+import type { Request } from "express";
+import { type Observable, Subject } from "rxjs";
 import { z } from "zod";
-import { SessionGuard } from "../auth/session.guard";
+import type { BetterAuthUser } from "../auth/auth.types";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
-import { BidsService } from "./bids.service";
-import { WalletService } from "../wallet/wallet.service";
-import type { BetterAuthUser } from "../auth/auth.types";
+import { SessionGuard } from "../auth/session.guard";
+import type { WalletService } from "../wallet/wallet.service";
+import type { BidsService } from "./bids.service";
 
 const placeBidSchema = z.object({
   amountCents: z.number().int().positive(),
@@ -53,11 +52,7 @@ export class BidsController {
   @Post()
   @UseGuards(SessionGuard, RolesGuard)
   @Roles("BIDDER")
-  async placeBid(
-    @Param("lotId") lotId: string,
-    @Req() req: Request,
-    @Body() body: unknown,
-  ) {
+  async placeBid(@Param("lotId") lotId: string, @Req() req: Request, @Body() body: unknown) {
     const parsed = placeBidSchema.safeParse(body);
     if (!parsed.success) throw new BadRequestException(parsed.error.flatten());
 

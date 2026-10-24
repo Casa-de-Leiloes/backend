@@ -1,12 +1,12 @@
-import { Injectable, Inject } from "@nestjs/common";
+import { Inject, Injectable } from "@nestjs/common";
+import { CatalogProvider as CatalogProviderEnum } from "@prisma/client";
 import type { Redis } from "ioredis";
 import type { PrismaService } from "../prisma/prisma.service";
-import { CatalogProvider as CatalogProviderEnum } from "@prisma/client";
 import { REDIS_CLIENT } from "../redis/redis.constants";
-import { AicAdapter } from "./adapters/aic.adapter";
-import { ScryfallAdapter } from "./adapters/scryfall.adapter";
-import { OpenLibraryAdapter } from "./adapters/open-library.adapter";
-import type { CatalogItem, CatalogProvider } from "./catalog.types";
+import type { AicAdapter } from "./adapters/aic.adapter";
+import type { OpenLibraryAdapter } from "./adapters/open-library.adapter";
+import type { ScryfallAdapter } from "./adapters/scryfall.adapter";
+import type { CatalogItem } from "./catalog.types";
 
 const CACHE_TTL_SECONDS = 3600;
 
@@ -74,12 +74,20 @@ export class CatalogService {
         provider: prismaProvider,
         externalId: id,
         title: item.title,
-        attributes: { ...item.metadata, description: item.description, externalUrl: item.externalUrl },
+        attributes: {
+          ...item.metadata,
+          description: item.description,
+          externalUrl: item.externalUrl,
+        },
         sourceImageUrl: item.imageUrl ?? "",
       },
       update: {
         title: item.title,
-        attributes: { ...item.metadata, description: item.description, externalUrl: item.externalUrl },
+        attributes: {
+          ...item.metadata,
+          description: item.description,
+          externalUrl: item.externalUrl,
+        },
         sourceImageUrl: item.imageUrl ?? "",
         fetchedAt: new Date(),
       },

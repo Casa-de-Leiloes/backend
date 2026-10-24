@@ -1,6 +1,12 @@
-import { createHmac, createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
+import {
+  createCipheriv,
+  createDecipheriv,
+  createHmac,
+  randomBytes,
+  timingSafeEqual,
+} from "node:crypto";
 import { Injectable, Optional } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import type { ConfigService } from "@nestjs/config";
 import type { AppEnv } from "../config/env.schema";
 
 const FERNET_VERSION = 0x80;
@@ -64,21 +70,27 @@ export class IdentityService {
 
   constructor(@Optional() config?: ConfigService<AppEnv, true>) {
     if (config) {
-      this.fernetKeys = config.get("FERNET_KEYS", { infer: true }).split(",").map((k) => k.trim());
+      this.fernetKeys = config
+        .get("FERNET_KEYS", { infer: true })
+        .split(",")
+        .map((k) => k.trim());
       this.emailLookupKey = config.get("EMAIL_LOOKUP_KEY", { infer: true });
       this.pseudonymKey = config.get("PSEUDONYM_KEY", { infer: true });
     } else {
-      this.fernetKeys = (process.env["FERNET_KEYS"] ?? "").split(",").map((k) => k.trim()).filter(Boolean);
-      this.emailLookupKey = process.env["EMAIL_LOOKUP_KEY"] ?? "";
-      this.pseudonymKey = process.env["PSEUDONYM_KEY"] ?? "";
+      this.fernetKeys = (process.env.FERNET_KEYS ?? "")
+        .split(",")
+        .map((k) => k.trim())
+        .filter(Boolean);
+      this.emailLookupKey = process.env.EMAIL_LOOKUP_KEY ?? "";
+      this.pseudonymKey = process.env.PSEUDONYM_KEY ?? "";
     }
     if (this.fernetKeys.length === 0) throw new Error("At least one Fernet key is required");
   }
 
   static fromOptions(opts: IdentityServiceOptions): IdentityService {
-    process.env["FERNET_KEYS"] = opts.fernetKeys.join(",");
-    process.env["EMAIL_LOOKUP_KEY"] = opts.emailLookupKey;
-    process.env["PSEUDONYM_KEY"] = opts.pseudonymKey;
+    process.env.FERNET_KEYS = opts.fernetKeys.join(",");
+    process.env.EMAIL_LOOKUP_KEY = opts.emailLookupKey;
+    process.env.PSEUDONYM_KEY = opts.pseudonymKey;
     return new IdentityService();
   }
 

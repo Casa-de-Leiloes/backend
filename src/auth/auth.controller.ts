@@ -1,7 +1,7 @@
 import { All, Controller, Req, Res } from "@nestjs/common";
 import type { Request, Response } from "express";
-import { AuthService } from "./auth.service";
-import { IdentityService } from "./identity.service";
+import type { AuthService } from "./auth.service";
+import type { IdentityService } from "./identity.service";
 
 @Controller("auth")
 export class AuthController {
@@ -34,9 +34,7 @@ export class AuthController {
     }
 
     const body =
-      req.method !== "GET" && req.method !== "HEAD"
-        ? JSON.stringify(bodyPayload)
-        : undefined;
+      req.method !== "GET" && req.method !== "HEAD" ? JSON.stringify(bodyPayload) : undefined;
 
     const fetchReq = new Request(fullUrl, { method: req.method, headers, body });
     const response = await this.authService.handler(fetchReq);

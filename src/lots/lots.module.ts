@@ -1,10 +1,10 @@
 import { Module } from "@nestjs/common";
-import { LotsService } from "./lots.service";
-import { LotsController } from "./lots.controller";
-import { LotSchedulerService } from "./lot-scheduler.service";
 import { AuthModule } from "../auth/auth.module";
 import { CatalogModule } from "../catalog/catalog.module";
 import { SettlementModule } from "../settlement/settlement.module";
+import { LotSchedulerService } from "./lot-scheduler.service";
+import { LotsController } from "./lots.controller";
+import { LotsService } from "./lots.service";
 
 @Module({
   imports: [AuthModule, CatalogModule, SettlementModule],

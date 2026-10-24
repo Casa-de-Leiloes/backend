@@ -1,9 +1,9 @@
 import { Test } from "@nestjs/testing";
-import { CatalogService } from "./catalog.service";
-import { AicAdapter } from "./adapters/aic.adapter";
-import { ScryfallAdapter } from "./adapters/scryfall.adapter";
-import { OpenLibraryAdapter } from "./adapters/open-library.adapter";
 import { REDIS_CLIENT } from "../redis/redis.constants";
+import { AicAdapter } from "./adapters/aic.adapter";
+import { OpenLibraryAdapter } from "./adapters/open-library.adapter";
+import { ScryfallAdapter } from "./adapters/scryfall.adapter";
+import { CatalogService } from "./catalog.service";
 import type { CatalogItem } from "./catalog.types";
 
 const fakeItem: CatalogItem = {

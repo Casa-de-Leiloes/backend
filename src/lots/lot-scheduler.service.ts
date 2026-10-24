@@ -1,10 +1,9 @@
-import { Injectable, OnModuleInit, OnModuleDestroy } from "@nestjs/common";
-import { Queue, Worker, type Job } from "bullmq";
+import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
+import { type Job, Queue, Worker } from "bullmq";
 import type Redis from "ioredis";
-import { Inject } from "@nestjs/common";
+import type { PrismaService } from "../prisma/prisma.service";
 import { REDIS_CLIENT } from "../redis/redis.constants";
-import { PrismaService } from "../prisma/prisma.service";
-import { SettlementService } from "../settlement/settlement.service";
+import type { SettlementService } from "../settlement/settlement.service";
 
 const QUEUE_NAME = "lot-lifecycle";
 
@@ -19,13 +18,13 @@ export class LotSchedulerService implements OnModuleInit, OnModuleDestroy {
   private worker!: Worker<LotJobData>;
 
   constructor(
-    @Inject(REDIS_CLIENT) private readonly redis: Redis,
+    @Inject(REDIS_CLIENT) readonly _redis: Redis,
     private readonly prisma: PrismaService,
     private readonly settlementService: SettlementService,
   ) {}
 
   onModuleInit() {
-    const redisUrl = process.env["REDIS_URL"] ?? "redis://localhost:6379";
+    const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
     const connection = { url: redisUrl, maxRetriesPerRequest: null as null };
     this.queue = new Queue<LotJobData>(QUEUE_NAME, { connection });
 
@@ -64,8 +63,16 @@ export class LotSchedulerService implements OnModuleInit, OnModuleDestroy {
     const openDelay = Math.max(0, startsAt.getTime() - now);
     const closeDelay = Math.max(0, endsAt.getTime() - now);
 
-    await this.queue.add("open", { lotId, action: "open" }, { delay: openDelay, jobId: `open-${lotId}` });
-    await this.queue.add("close", { lotId, action: "close" }, { delay: closeDelay, jobId: `close-${lotId}` });
+    await this.queue.add(
+      "open",
+      { lotId, action: "open" },
+      { delay: openDelay, jobId: `open-${lotId}` },
+    );
+    await this.queue.add(
+      "close",
+      { lotId, action: "close" },
+      { delay: closeDelay, jobId: `close-${lotId}` },
+    );
   }
 
   async rescheduleClose(lotId: string, endsAt: Date): Promise<void> {

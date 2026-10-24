@@ -1,12 +1,34 @@
-import { Injectable, BadRequestException } from "@nestjs/common";
-import type { Bid } from "@prisma/client";
 import { createHmac } from "node:crypto";
-import { PrismaService } from "../prisma/prisma.service";
-import { WalletService } from "../wallet/wallet.service";
+import { BadRequestException, Injectable } from "@nestjs/common";
+import type { Bid } from "@prisma/client";
+import type { PrismaService } from "../prisma/prisma.service";
+import type { WalletService } from "../wallet/wallet.service";
 import { hashBid } from "./bid-chain";
 
-const ADJECTIVES = ["Swift","Bold","Sharp","Quiet","Brave","Calm","Deft","Keen","Wise","Warm"];
-const ANIMALS = ["Falcon","Lynx","Otter","Raven","Wolf","Crane","Bear","Hawk","Fox","Stag"];
+const ADJECTIVES = [
+  "Swift",
+  "Bold",
+  "Sharp",
+  "Quiet",
+  "Brave",
+  "Calm",
+  "Deft",
+  "Keen",
+  "Wise",
+  "Warm",
+];
+const ANIMALS = [
+  "Falcon",
+  "Lynx",
+  "Otter",
+  "Raven",
+  "Wolf",
+  "Crane",
+  "Bear",
+  "Hawk",
+  "Fox",
+  "Stag",
+];
 
 function derivePseudonym(bidderId: string, pseudonymKey: string): string {
   const hash = createHmac("sha256", pseudonymKey).update(bidderId).digest();
@@ -35,9 +57,9 @@ export class BidsService {
 
   constructor(
     private readonly prisma: PrismaService,
-    private readonly walletService: WalletService,
+    readonly _walletService: WalletService,
   ) {
-    this.signingKey = process.env["AUDIT_SIGNING_KEY"] ?? "";
+    this.signingKey = process.env.AUDIT_SIGNING_KEY ?? "";
   }
 
   async placeBid(input: PlaceBidInput): Promise<Bid> {
@@ -45,13 +67,14 @@ export class BidsService {
       const lot = await tx.lot.findUnique({ where: { id: input.lotId } });
       const now = new Date();
 
-      if (!lot || lot.status !== "LIVE" || lot.endsAt <= now) {
+      if (lot?.status !== "LIVE" || lot.endsAt <= now) {
         throw new BadRequestException("LOT_NOT_LIVE");
       }
 
-      const minBid = lot.currentBidCents !== null
-        ? lot.currentBidCents + lot.minIncrementCents
-        : lot.startingBidCents;
+      const minBid =
+        lot.currentBidCents !== null
+          ? lot.currentBidCents + lot.minIncrementCents
+          : lot.startingBidCents;
 
       if (input.amountCents < minBid) {
         throw new BadRequestException("BID_TOO_LOW");
@@ -111,11 +134,15 @@ export class BidsService {
   }
 
   getPseudonym(bidderId: string): string {
-    const key = process.env["PSEUDONYM_KEY"] ?? "";
+    const key = process.env.PSEUDONYM_KEY ?? "";
     return derivePseudonym(bidderId, key);
   }
 
-  async getMyBids(bidderId: string, cursor?: string, limit = 20): Promise<{ items: Bid[]; nextCursor: string | null }> {
+  async getMyBids(
+    bidderId: string,
+    cursor?: string,
+    limit = 20,
+  ): Promise<{ items: Bid[]; nextCursor: string | null }> {
     const items = await this.prisma.bid.findMany({
       where: { bidderId },
       orderBy: { placedAt: "desc" },
@@ -127,7 +154,9 @@ export class BidsService {
     return { items, nextCursor: hasNext ? (items[items.length - 1]?.id ?? null) : null };
   }
 
-  async getMyWins(bidderId: string): Promise<Array<{ lotId: string; amountCents: bigint; receiptToken: string | null }>> {
+  async getMyWins(
+    bidderId: string,
+  ): Promise<Array<{ lotId: string; amountCents: bigint; receiptToken: string | null }>> {
     const receipts = await this.prisma.receipt.findMany({
       where: { winnerId: bidderId },
       orderBy: { issuedAt: "desc" },
