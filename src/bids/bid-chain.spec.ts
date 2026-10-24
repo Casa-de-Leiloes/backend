@@ -29,8 +29,8 @@ describe("bid-chain", () => {
       const h2 = hashBid({ lotId: "lot-1", bidId: "bid-2", bidderId: "user-2", amountCents: 2000n, prevHash: h1 });
 
       const bids = [
-        { id: "bid-1", lotId: "lot-1", bidderId: "user-1", amountCents: 1000n, chainHash: h1, prevHash: null },
-        { id: "bid-2", lotId: "lot-1", bidderId: "user-2", amountCents: 2000n, chainHash: h2, prevHash: h1 },
+        { id: "bid-1", lotId: "lot-1", bidderId: "user-1", amountCents: 1000n, hash: h1, previousHash: null },
+        { id: "bid-2", lotId: "lot-1", bidderId: "user-2", amountCents: 2000n, hash: h2, previousHash: h1 },
       ];
       expect(verifyBidChain(bids)).toBe(true);
     });
@@ -38,7 +38,7 @@ describe("bid-chain", () => {
     it("rejects tampered amount", () => {
       const h1 = hashBid({ lotId: "lot-1", bidId: "bid-1", bidderId: "user-1", amountCents: 1000n, prevHash: null });
       const bids = [
-        { id: "bid-1", lotId: "lot-1", bidderId: "user-1", amountCents: 9999n, chainHash: h1, prevHash: null },
+        { id: "bid-1", lotId: "lot-1", bidderId: "user-1", amountCents: 9999n, hash: h1, previousHash: null },
       ];
       expect(verifyBidChain(bids)).toBe(false);
     });
@@ -47,8 +47,8 @@ describe("bid-chain", () => {
       const h1 = hashBid({ lotId: "lot-1", bidId: "bid-1", bidderId: "user-1", amountCents: 1000n, prevHash: null });
       const h2 = hashBid({ lotId: "lot-1", bidId: "bid-2", bidderId: "user-2", amountCents: 2000n, prevHash: h1 });
       const bids = [
-        { id: "bid-1", lotId: "lot-1", bidderId: "user-1", amountCents: 1000n, chainHash: h1, prevHash: null },
-        { id: "bid-2", lotId: "lot-1", bidderId: "user-2", amountCents: 2000n, chainHash: h2, prevHash: "tampered-prev" },
+        { id: "bid-1", lotId: "lot-1", bidderId: "user-1", amountCents: 1000n, hash: h1, previousHash: null },
+        { id: "bid-2", lotId: "lot-1", bidderId: "user-2", amountCents: 2000n, hash: h2, previousHash: "tampered-prev" },
       ];
       expect(verifyBidChain(bids)).toBe(false);
     });

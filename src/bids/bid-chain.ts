@@ -13,8 +13,8 @@ interface BidChainEntry {
   lotId: string;
   bidderId: string;
   amountCents: bigint;
-  chainHash: string;
-  prevHash: string | null;
+  hash: string;
+  previousHash: string | null;
 }
 
 export function hashBid(input: BidHashInput): string {
@@ -34,17 +34,17 @@ export function verifyBidChain(bids: BidChainEntry[]): boolean {
   for (let i = 0; i < bids.length; i++) {
     const bid = bids[i];
     if (!bid) return false;
-    const expectedPrevHash = i === 0 ? null : (bids[i - 1]?.chainHash ?? null);
-    if (bid.prevHash !== expectedPrevHash) return false;
+    const expectedPrevHash = i === 0 ? null : (bids[i - 1]?.hash ?? null);
+    if (bid.previousHash !== expectedPrevHash) return false;
 
     const expected = hashBid({
       lotId: bid.lotId,
       bidId: bid.id,
       bidderId: bid.bidderId,
       amountCents: bid.amountCents,
-      prevHash: bid.prevHash,
+      prevHash: bid.previousHash,
     });
-    if (bid.chainHash !== expected) return false;
+    if (bid.hash !== expected) return false;
   }
   return true;
 }
