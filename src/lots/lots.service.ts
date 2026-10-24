@@ -1,4 +1,4 @@
-import { Injectable } from "@nestjs/common";
+import { Injectable, ForbiddenException } from "@nestjs/common";
 import type { Lot, LotStatus, CatalogProvider } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
@@ -51,6 +51,41 @@ export class LotsService {
 
   async findById(id: string): Promise<Lot> {
     return this.prisma.lot.findUniqueOrThrow({ where: { id } });
+  }
+
+  async cancel(lotId: string, requesterId: string): Promise<Lot> {
+    return this.prisma.$transaction(async (tx) => {
+      const lot = await tx.lot.findUniqueOrThrow({ where: { id: lotId } });
+
+      if (lot.auctioneerId !== requesterId) throw new ForbiddenException("FORBIDDEN_ROLE");
+      if (lot.status === "CLOSED" || lot.status === "CANCELLED") {
+        throw new ForbiddenException(`LOT_ALREADY_${lot.status}`);
+      }
+
+      const uniqueBidders = await tx.bid.groupBy({
+        by: ["bidderId"],
+        where: { lotId },
+        _max: { amountCents: true },
+      });
+
+      for (const row of uniqueBidders) {
+        const wallet = await tx.wallet.findUnique({ where: { userId: row.bidderId } });
+        if (!wallet || !row._max.amountCents) continue;
+        const refundAmount = row._max.amountCents;
+
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: {
+            committedCents: { decrement: refundAmount },
+          },
+        });
+        await tx.walletLedgerEntry.create({
+          data: { walletId: wallet.id, kind: "RELEASE", amountCents: refundAmount, lotId },
+        });
+      }
+
+      return tx.lot.update({ where: { id: lotId }, data: { status: "CANCELLED", closedAt: new Date() } });
+    });
   }
 
   async getBidderPosition(lotId: string, bidderId: string): Promise<BidderPosition> {

@@ -2,6 +2,7 @@ import {
   Controller,
   Get,
   Post,
+  Delete,
   Param,
   Body,
   Query,
@@ -109,6 +110,15 @@ export class LotsController {
     } catch {
       throw new NotFoundException(`Lot ${id} not found`);
     }
+  }
+
+  @Delete(":id")
+  @UseGuards(SessionGuard, RolesGuard)
+  @Roles("AUCTIONEER")
+  async cancel(@Param("id") id: string, @Req() req: Request) {
+    const user = req.user as BetterAuthUser;
+    const lot = await this.lotsService.cancel(id, user.id);
+    return serializeLot(lot);
   }
 
   @Get(":id/position")
