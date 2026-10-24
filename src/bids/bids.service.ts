@@ -5,6 +5,17 @@ import { PrismaService } from "../prisma/prisma.service";
 import { WalletService } from "../wallet/wallet.service";
 import { hashBid } from "./bid-chain";
 
+const ADJECTIVES = ["Swift","Bold","Sharp","Quiet","Brave","Calm","Deft","Keen","Wise","Warm"];
+const ANIMALS = ["Falcon","Lynx","Otter","Raven","Wolf","Crane","Bear","Hawk","Fox","Stag"];
+
+function derivePseudonym(bidderId: string, pseudonymKey: string): string {
+  const hash = createHmac("sha256", pseudonymKey).update(bidderId).digest();
+  const adj = ADJECTIVES[hash[0]! % ADJECTIVES.length]!;
+  const animal = ANIMALS[hash[1]! % ANIMALS.length]!;
+  const num = (hash[2]! * 256 + hash[3]!) % 1000;
+  return `${adj}${animal}${num}`;
+}
+
 const ANTI_SNIPE_WINDOW_MS = 2 * 60 * 1000;
 
 export interface PlaceBidInput {
@@ -97,6 +108,11 @@ export class BidsService {
       where: { lotId },
       orderBy: { sequence: "asc" },
     });
+  }
+
+  getPseudonym(bidderId: string): string {
+    const key = process.env["PSEUDONYM_KEY"] ?? "";
+    return derivePseudonym(bidderId, key);
   }
 
   async getMyBids(bidderId: string, cursor?: string, limit = 20): Promise<{ items: Bid[]; nextCursor: string | null }> {

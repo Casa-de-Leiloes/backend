@@ -91,6 +91,7 @@ export class BidsController {
       sequence: b.sequence,
       amountCents: b.amountCents.toString(),
       placedAt: b.placedAt,
+      pseudonym: this.bidsService.getPseudonym(b.bidderId),
     }));
   }
 
