@@ -110,4 +110,17 @@ export class LotsController {
       throw new NotFoundException(`Lot ${id} not found`);
     }
   }
+
+  @Get(":id/position")
+  @UseGuards(SessionGuard)
+  async getBidderPosition(@Param("id") id: string, @Req() req: Request) {
+    const user = req.user as BetterAuthUser;
+    const position = await this.lotsService.getBidderPosition(id, user.id);
+    return {
+      ...position,
+      lastBidCents: position.lastBidCents?.toString() ?? null,
+      currentPriceCents: position.currentPriceCents?.toString() ?? null,
+      gapToLeadCents: position.gapToLeadCents?.toString() ?? null,
+    };
+  }
 }

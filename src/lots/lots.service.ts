@@ -19,6 +19,14 @@ export interface LotPage {
   nextCursor: string | null;
 }
 
+export interface BidderPosition {
+  rank: number | null;
+  lastBidCents: bigint | null;
+  currentPriceCents: bigint | null;
+  gapToLeadCents: bigint | null;
+  isLeading: boolean;
+}
+
 @Injectable()
 export class LotsService {
   constructor(private readonly prisma: PrismaService) {}
@@ -43,6 +51,51 @@ export class LotsService {
 
   async findById(id: string): Promise<Lot> {
     return this.prisma.lot.findUniqueOrThrow({ where: { id } });
+  }
+
+  async getBidderPosition(lotId: string, bidderId: string): Promise<BidderPosition> {
+    const lot = await this.prisma.lot.findUniqueOrThrow({ where: { id: lotId } });
+
+    const bids = await this.prisma.bid.findMany({
+      where: { lotId },
+      orderBy: { sequence: "desc" },
+    });
+
+    if (bids.length === 0) {
+      return { rank: null, lastBidCents: null, currentPriceCents: lot.currentBidCents, gapToLeadCents: null, isLeading: false };
+    }
+
+    const myBids = bids.filter((b) => b.bidderId === bidderId);
+    if (myBids.length === 0) {
+      return { rank: null, lastBidCents: null, currentPriceCents: lot.currentBidCents, gapToLeadCents: null, isLeading: false };
+    }
+
+    const lastBidCents = myBids[0]!.amountCents;
+
+    const uniqueBidders = [...new Set(bids.map((b) => b.bidderId))];
+    const bidderHighest = new Map<string, bigint>();
+    for (const bid of bids) {
+      const prev = bidderHighest.get(bid.bidderId);
+      if (prev === undefined || bid.amountCents > prev) {
+        bidderHighest.set(bid.bidderId, bid.amountCents);
+      }
+    }
+
+    const sorted = [...bidderHighest.entries()].sort((a, b) => (b[1] > a[1] ? 1 : -1));
+    const rank = sorted.findIndex(([id]) => id === bidderId) + 1;
+    const isLeading = rank === 1;
+    const leadAmount = sorted[0]![1];
+    const myAmount = bidderHighest.get(bidderId) ?? 0n;
+    const gapToLeadCents = isLeading ? 0n : leadAmount - myAmount;
+
+    return {
+      rank,
+      lastBidCents,
+      currentPriceCents: lot.currentBidCents,
+      gapToLeadCents,
+      isLeading,
+    };
+    void uniqueBidders;
   }
 
   async list(opts: {
