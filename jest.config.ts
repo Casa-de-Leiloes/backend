@@ -1,11 +1,11 @@
 import type { Config } from 'jest';
 
 const config: Config = {
-  moduleFileExtensions: ['js', 'json', 'ts'],
+  moduleFileExtensions: ['js', 'mjs', 'cjs', 'json', 'ts'],
   rootDir: 'src',
-  testRegex: '.*\\.spec\\.ts$',
+  testRegex: '.*\\.(spec|e2e-spec)\\.ts$',
   transform: {
-    '^.+\\.(t|j)sx?$': ['@swc/jest', {
+    '^.+\\.(t|j)sx?$|^.+\\.mjs$': ['@swc/jest', {
       jsc: {
         parser: {
           syntax: 'typescript',
@@ -24,7 +24,7 @@ const config: Config = {
     }],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(@nestjs|nestjs-zod|zod|rxjs|@bullmq|bullmq)/)',
+    'node_modules/(?!(@nestjs|nestjs-zod|zod|rxjs|@bullmq|bullmq|better-auth|@better-auth|better-call|@better-fetch|rou3|set-cookie-parser|@noble|nanostores|jose|defu|kysely)/)',
   ],
   collectCoverageFrom: ['**/*.(t|j)s', '!**/*.spec.(t|j)s', '!**/main.ts'],
   coverageDirectory: '../coverage',
@@ -36,6 +36,7 @@ const config: Config = {
       statements: 98,
     },
   },
+  setupFiles: ['<rootDir>/../test/jest-setup.ts'],
   testEnvironment: 'node',
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
