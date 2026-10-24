@@ -52,6 +52,14 @@ export class CatalogService {
     }
   }
 
+  async getSnapshotByExternalId(providerKey: string, id: string) {
+    const prismaProvider = PROVIDER_MAP[providerKey];
+    if (!prismaProvider) throw new Error(`Unknown provider: ${providerKey}`);
+    return this.prisma.catalogItemSnapshot.findUniqueOrThrow({
+      where: { provider_externalId: { provider: prismaProvider, externalId: id } },
+    });
+  }
+
   async fetchAndSnapshot(providerKey: string, id: string): Promise<CatalogItem> {
     const adapter = this.adapters.get(providerKey);
     if (!adapter) throw new Error(`Unknown provider: ${providerKey}`);

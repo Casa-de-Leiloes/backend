@@ -7,6 +7,7 @@ import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./redis/redis.module";
 import { WalletModule } from "./wallet/wallet.module";
 import { CatalogModule } from "./catalog/catalog.module";
+import { LotsModule } from "./lots/lots.module";
 
 @Module({
   imports: [
@@ -19,6 +20,7 @@ import { CatalogModule } from "./catalog/catalog.module";
     AuthModule,
     WalletModule,
     CatalogModule,
+    LotsModule,
     HealthModule,
   ],
 })
