@@ -19,8 +19,8 @@ import type { BetterAuthUser } from "../auth/auth.types";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { SessionGuard } from "../auth/session.guard";
-import type { CatalogService } from "../catalog/catalog.service";
-import type { LotsService } from "./lots.service";
+import { CatalogService } from "../catalog/catalog.service";
+import { LotsService } from "./lots.service";
 
 const createLotSchema = z.object({
   snapshotId: z.string().optional(),

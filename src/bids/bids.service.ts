@@ -1,8 +1,8 @@
 import { createHmac } from "node:crypto";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import type { Bid } from "@prisma/client";
-import type { PrismaService } from "../prisma/prisma.service";
-import type { WalletService } from "../wallet/wallet.service";
+import { PrismaService } from "../prisma/prisma.service";
+import { WalletService } from "../wallet/wallet.service";
 import { hashBid } from "./bid-chain";
 
 const ADJECTIVES = [

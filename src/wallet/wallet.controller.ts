@@ -16,7 +16,7 @@ import type { BetterAuthUser } from "../auth/auth.types";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { SessionGuard } from "../auth/session.guard";
-import type { WalletService } from "./wallet.service";
+import { WalletService } from "./wallet.service";
 
 const depositBodySchema = z.object({
   amountCents: z.number().int().positive(),

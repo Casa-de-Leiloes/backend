@@ -9,10 +9,10 @@ import {
 } from "@nestjs/common";
 import type { Request } from "express";
 import type { BetterAuthUser } from "../auth/auth.types";
-import type { IdentityService } from "../auth/identity.service";
+import { IdentityService } from "../auth/identity.service";
 import { SessionGuard } from "../auth/session.guard";
-import type { BidsService } from "../bids/bids.service";
-import type { PrismaService } from "../prisma/prisma.service";
+import { BidsService } from "../bids/bids.service";
+import { PrismaService } from "../prisma/prisma.service";
 
 @Controller("users/me")
 @UseGuards(SessionGuard)

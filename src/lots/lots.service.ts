@@ -1,6 +1,6 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
 import type { CatalogProvider, Lot, LotStatus } from "@prisma/client";
-import type { PrismaService } from "../prisma/prisma.service";
+import { PrismaService } from "../prisma/prisma.service";
 
 export interface CreateLotInput {
   auctioneerId: string;
