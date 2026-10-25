@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import type { CatalogProvider, Lot, LotStatus } from "@prisma/client";
+import type { CatalogItemSnapshot, CatalogProvider, Lot, LotStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
 export interface CreateLotInput {
@@ -14,8 +14,10 @@ export interface CreateLotInput {
   endsAt: Date;
 }
 
+export type LotWithSnapshot = Lot & { snapshot: CatalogItemSnapshot | null };
+
 export interface LotPage {
-  items: Lot[];
+  items: LotWithSnapshot[];
   nextCursor: string | null;
 }
 
@@ -154,6 +156,7 @@ export class LotsService {
       orderBy: { endsAt: "asc" },
       take: opts.limit + 1,
       ...(opts.cursor ? { skip: 1, cursor: { id: opts.cursor } } : {}),
+      include: { snapshot: true },
     });
 
     const hasNext = items.length > opts.limit;

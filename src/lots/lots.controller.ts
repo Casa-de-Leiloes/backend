@@ -21,7 +21,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { SessionGuard } from "../auth/session.guard";
 import { CatalogService } from "../catalog/catalog.service";
 import { SettlementService } from "../settlement/settlement.service";
-import { LotsService } from "./lots.service";
+import { LotsService, type LotWithSnapshot } from "./lots.service";
 
 const createLotSchema = z.object({
   snapshotId: z.string().optional(),
@@ -42,6 +42,17 @@ function serializeLot(lot: Awaited<ReturnType<LotsService["findById"]>>) {
     startingBidCents: lot.startingBidCents.toString(),
     minIncrementCents: lot.minIncrementCents.toString(),
     currentBidCents: lot.currentBidCents?.toString() ?? null,
+  };
+}
+
+function serializeLotWithSnapshot(lot: LotWithSnapshot) {
+  return {
+    ...lot,
+    startingBidCents: lot.startingBidCents.toString(),
+    minIncrementCents: lot.minIncrementCents.toString(),
+    currentBidCents: lot.currentBidCents?.toString() ?? null,
+    imageUrl: lot.snapshot?.sourceImageUrl ?? null,
+    snapshot: undefined,
   };
 }
 
@@ -104,7 +115,7 @@ export class LotsController {
       cursor,
     });
     return {
-      items: page.items.map(serializeLot),
+      items: page.items.map(serializeLotWithSnapshot),
       nextCursor: page.nextCursor,
     };
   }
