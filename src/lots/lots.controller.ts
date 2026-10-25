@@ -20,6 +20,7 @@ import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { SessionGuard } from "../auth/session.guard";
 import { CatalogService } from "../catalog/catalog.service";
+import { SettlementService } from "../settlement/settlement.service";
 import { LotsService } from "./lots.service";
 
 const createLotSchema = z.object({
@@ -49,6 +50,7 @@ export class LotsController {
   constructor(
     private readonly lotsService: LotsService,
     private readonly catalogService: CatalogService,
+    private readonly settlementService: SettlementService,
   ) {}
 
   @Post()
@@ -105,6 +107,25 @@ export class LotsController {
       items: page.items.map(serializeLot),
       nextCursor: page.nextCursor,
     };
+  }
+
+  @Get("receipt/:token")
+  async getReceipt(@Param("token") token: string) {
+    try {
+      const receipt = await this.settlementService.getReceiptByToken(token);
+      const lot = await this.lotsService.findById(receipt.lotId);
+      return {
+        lotId: receipt.lotId,
+        lotTitle: lot.title,
+        winnerId: receipt.winnerId,
+        amountCents: receipt.amountCents.toString(),
+        publicToken: receipt.publicToken,
+        issuedAt: receipt.issuedAt,
+        finalChainHash: receipt.finalChainHash,
+      };
+    } catch {
+      throw new NotFoundException("Receipt not found");
+    }
   }
 
   @Get(":id")
