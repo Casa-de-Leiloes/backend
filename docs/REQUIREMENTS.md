@@ -12,22 +12,22 @@ Legend: **MUST** = mandatory, **OPTIONAL** = not required but evaluated, **OUT**
 
 Build an online Auction House where an auctioneer puts items up for auction and bidders compete for each lot with live bids.
 
-| ID | Level | Requirement |
-|----|-------|-------------|
-| GEN-01 | MUST | The auctioned items can be of any theme, but they **must come from a public API**. |
-| GEN-02 | MUST | The auctioneer builds a lot from an item fetched from the chosen external API, defining starting bid, minimum increment, start time, end time and other relevant fields. |
-| GEN-03 | MUST | The bidder deposits a simulated balance in their wallet, follows lots live, places bids and, if they win, receives a hammer receipt (comprovante de arremate) that can be shared via link. |
-| GEN-04 | MUST | Anyone, **even without login**, can audit the bid history of a lot and verify it was not tampered with. |
-| GEN-05 | MUST | **Deployment is mandatory.** A public link of the running application is part of the delivery. |
+| ID     | Level | Requirement                                                                                                                                                                                |
+| ------ | ----- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| GEN-01 | MUST  | The auctioned items can be of any theme, but they **must come from a public API**.                                                                                                         |
+| GEN-02 | MUST  | The auctioneer builds a lot from an item fetched from the chosen external API, defining starting bid, minimum increment, start time, end time and other relevant fields.                   |
+| GEN-03 | MUST  | The bidder deposits a simulated balance in their wallet, follows lots live, places bids and, if they win, receives a hammer receipt (comprovante de arremate) that can be shared via link. |
+| GEN-04 | MUST  | Anyone, **even without login**, can audit the bid history of a lot and verify it was not tampered with.                                                                                    |
+| GEN-05 | MUST  | **Deployment is mandatory.** A public link of the running application is part of the delivery.                                                                                             |
 
 ### 1.1 Users and authentication
 
 The platform has two distinct roles:
 
-| ID | Role | Rule |
-|----|------|------|
+| ID      | Role                | Rule                                                           |
+| ------- | ------------------- | -------------------------------------------------------------- |
 | AUTH-01 | Auctioneer (seller) | Creates and manages **their own** lots. **Cannot place bids.** |
-| AUTH-02 | Bidder (client) | Deposits balance, places bids and wins items. |
+| AUTH-02 | Bidder (client)     | Deposits balance, places bids and wins items.                  |
 
 References (use as a starting point, do not copy): catawiki.com/pt, liveauctioneers.com, superbid.net.
 
@@ -35,17 +35,17 @@ References (use as a starting point, do not copy): catawiki.com/pt, liveauctione
 
 ## 2. Front-end
 
-| ID | Screen | Requirement |
-|----|--------|-------------|
-| FE-01 | Lot showcase | Displays auctioned items, separating **live**, **scheduled** and **closed** lots. **Cancelled lots do not appear in the showcase.** |
-| FE-02 | Auctioneer panel | Search items in the chosen API and create a lot from them (with image, title, item attributes, start/end date and minimum value). |
-| FE-03 | Auctioneer panel | Cancel a lot that **has not received any bids yet**. |
-| FE-04 | Auctioneer panel | See the result of each closed lot (whether it was sold and for how much) and the **total received**. |
-| FE-05 | Live lot room | Shows current bid, bid history, the user's position in the bids, countdown, and a clear "you are winning" / "you have been outbid" indicator. **Everything updates without reloading the page.** |
-| FE-06 | Bidder wallet | Shows **total balance**, **committed balance**, **available balance** and a simulated deposit option. |
-| FE-07 | My wins | Shows the items the user bid on and the lots they won, each with its receipt and share link. |
-| FE-08 | Audit page | **Public and without login.** Shows the full bid history of a lot and states whether it is **intact or tampered**. |
-| FE-09 | Feedback messages | A clear message for every rejected bid, stating the reason: **below minimum**, **insufficient balance**, **you are already winning**, **lot not started yet**, or **lot closed**. |
+| ID    | Screen            | Requirement                                                                                                                                                                                      |
+| ----- | ----------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| FE-01 | Lot showcase      | Displays auctioned items, separating **live**, **scheduled** and **closed** lots. **Cancelled lots do not appear in the showcase.**                                                              |
+| FE-02 | Auctioneer panel  | Search items in the chosen API and create a lot from them (with image, title, item attributes, start/end date and minimum value).                                                                |
+| FE-03 | Auctioneer panel  | Cancel a lot that **has not received any bids yet**.                                                                                                                                             |
+| FE-04 | Auctioneer panel  | See the result of each closed lot (whether it was sold and for how much) and the **total received**.                                                                                             |
+| FE-05 | Live lot room     | Shows current bid, bid history, the user's position in the bids, countdown, and a clear "you are winning" / "you have been outbid" indicator. **Everything updates without reloading the page.** |
+| FE-06 | Bidder wallet     | Shows **total balance**, **committed balance**, **available balance** and a simulated deposit option.                                                                                            |
+| FE-07 | My wins           | Shows the items the user bid on and the lots they won, each with its receipt and share link.                                                                                                     |
+| FE-08 | Audit page        | **Public and without login.** Shows the full bid history of a lot and states whether it is **intact or tampered**.                                                                               |
+| FE-09 | Feedback messages | A clear message for every rejected bid, stating the reason: **below minimum**, **insufficient balance**, **you are already winning**, **lot not started yet**, or **lot closed**.                |
 
 ---
 
@@ -53,33 +53,33 @@ References (use as a starting point, do not copy): catawiki.com/pt, liveauctione
 
 ### 3.1 External API management
 
-| ID | Level | Requirement |
-|----|-------|-------------|
-| EXT-01 | MUST | APIs have limits and instabilities. The application cannot become unusable because of that. |
-| EXT-02 | MUST | The **showcase, the rooms, the audit and the receipt must keep working even if the external API goes down.** |
+| ID     | Level | Requirement                                                                                                  |
+| ------ | ----- | ------------------------------------------------------------------------------------------------------------ |
+| EXT-01 | MUST  | APIs have limits and instabilities. The application cannot become unusable because of that.                  |
+| EXT-02 | MUST  | The **showcase, the rooms, the audit and the receipt must keep working even if the external API goes down.** |
 
 ### 3.2 Bid rules
 
-| ID | Level | Requirement |
-|----|-------|-------------|
-| BID-01 | MUST | Bids are only accepted on **live** lots (between start and end). |
-| BID-02 | MUST | The **first bid must be ≥ the starting bid**. Subsequent bids must be **≥ current bid + minimum increment**. |
-| BID-03 | MUST | The **leading bidder cannot outbid their own bid**. |
+| ID     | Level | Requirement                                                                                                  |
+| ------ | ----- | ------------------------------------------------------------------------------------------------------------ |
+| BID-01 | MUST  | Bids are only accepted on **live** lots (between start and end).                                             |
+| BID-02 | MUST  | The **first bid must be ≥ the starting bid**. Subsequent bids must be **≥ current bid + minimum increment**. |
+| BID-03 | MUST  | The **leading bidder cannot outbid their own bid**.                                                          |
 
 ### 3.3 Business rules
 
-| ID | Topic | Requirement |
-|----|-------|-------------|
-| BAL-01 | Committed balance | **Available balance = total balance − committed balance.** |
-| BAL-02 | Committed balance | When the bidder is leading, the bid amount becomes committed. |
-| BAL-03 | Committed balance | If outbid, the amount returns to available **immediately**. |
-| BAL-04 | Committed balance | A bid is only accepted if it **fits in the available balance**. |
-| SNIPE-01 | Extension (anti-sniping) | A bid accepted in the **last 2 minutes** extends the lot end to **+2 minutes**. |
-| SETTLE-01 | Settlement | On closing, the winner's amount is **debited** and the auctioneer is **credited**, generating the receipt. |
-| SETTLE-02 | Settlement | Lots without bids close **without a winner**. |
-| AUDIT-01 | Tamper-evident history | Any change, removal or later insertion into the history (**even directly in the database**) must be detected by the audit. |
-| AUDIT-02 | Tamper-evident history | The technique is our choice and **must be explained** (README). |
-| PRIV-01 | Privacy | The audit and the receipt identify bidders **without exposing personal data**. |
+| ID        | Topic                    | Requirement                                                                                                                |
+| --------- | ------------------------ | -------------------------------------------------------------------------------------------------------------------------- |
+| BAL-01    | Committed balance        | **Available balance = total balance − committed balance.**                                                                 |
+| BAL-02    | Committed balance        | When the bidder is leading, the bid amount becomes committed.                                                              |
+| BAL-03    | Committed balance        | If outbid, the amount returns to available **immediately**.                                                                |
+| BAL-04    | Committed balance        | A bid is only accepted if it **fits in the available balance**.                                                            |
+| SNIPE-01  | Extension (anti-sniping) | A bid accepted in the **last 2 minutes** extends the lot end to **+2 minutes**.                                            |
+| SETTLE-01 | Settlement               | On closing, the winner's amount is **debited** and the auctioneer is **credited**, generating the receipt.                 |
+| SETTLE-02 | Settlement               | Lots without bids close **without a winner**.                                                                              |
+| AUDIT-01  | Tamper-evident history   | Any change, removal or later insertion into the history (**even directly in the database**) must be detected by the audit. |
+| AUDIT-02  | Tamper-evident history   | The technique is our choice and **must be explained** (README).                                                            |
+| PRIV-01   | Privacy                  | The audit and the receipt identify bidders **without exposing personal data**.                                             |
 
 ---
 
@@ -87,21 +87,21 @@ References (use as a starting point, do not copy): catawiki.com/pt, liveauctione
 
 ### 4.1 Mandatory technologies
 
-| ID | Layer | Requirement |
-|----|-------|-------------|
-| TECH-01 | Front-end | React, with or without a framework (Next.js, Vite, Remix, ...). |
-| TECH-02 | Back-end | Node.js or Python, any framework (NestJS, Express, FastAPI, Django, ...). |
-| TECH-03 | Database | PostgreSQL, MySQL or a NoSQL database (e.g. MongoDB). The README must include clear instructions on how to configure and use it. |
+| ID      | Layer     | Requirement                                                                                                                      |
+| ------- | --------- | -------------------------------------------------------------------------------------------------------------------------------- |
+| TECH-01 | Front-end | React, with or without a framework (Next.js, Vite, Remix, ...).                                                                  |
+| TECH-02 | Back-end  | Node.js or Python, any framework (NestJS, Express, FastAPI, Django, ...).                                                        |
+| TECH-03 | Database  | PostgreSQL, MySQL or a NoSQL database (e.g. MongoDB). The README must include clear instructions on how to configure and use it. |
 
 ### 4.2 Non-functional requirements
 
-| ID | Topic | Requirement |
-|----|-------|-------------|
-| NFR-01 | Deadline | 7 calendar days from receiving the challenge. |
-| NFR-02 | Seed data | Seed **one auctioneer**, **two clients** and **at least one published lot with open bids**, so evaluators can walk through the flow without building everything from scratch. |
-| NFR-03 | Documentation | A detailed README explaining step by step how to configure and run the application. |
-| NFR-04 | Documentation | Features with **unexpected behavior must be mentioned** in the README. |
-| NFR-05 | Documentation | Missing explanations negatively impact the final grade. |
+| ID     | Topic         | Requirement                                                                                                                                                                   |
+| ------ | ------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| NFR-01 | Deadline      | 7 calendar days from receiving the challenge.                                                                                                                                 |
+| NFR-02 | Seed data     | Seed **one auctioneer**, **two clients** and **at least one published lot with open bids**, so evaluators can walk through the flow without building everything from scratch. |
+| NFR-03 | Documentation | A detailed README explaining step by step how to configure and run the application.                                                                                           |
+| NFR-04 | Documentation | Features with **unexpected behavior must be mentioned** in the README.                                                                                                        |
+| NFR-05 | Documentation | Missing explanations negatively impact the final grade.                                                                                                                       |
 
 ---
 
@@ -109,22 +109,22 @@ References (use as a starting point, do not copy): catawiki.com/pt, liveauctione
 
 None is mandatory, but **all are considered in the evaluation**.
 
-| ID | Item |
-|----|------|
-| OPT-01 | Lot search and filtering. |
-| OPT-02 | Lot cancellation with automatic refund. |
-| OPT-03 | Docker Compose. |
-| OPT-04 | Automated tests. |
+| ID     | Item                                                   |
+| ------ | ------------------------------------------------------ |
+| OPT-01 | Lot search and filtering.                              |
+| OPT-02 | Lot cancellation with automatic refund.                |
+| OPT-03 | Docker Compose.                                        |
+| OPT-04 | Automated tests.                                       |
 | OPT-05 | Dark mode: interface supporting light and dark themes. |
 
 ### 5.1 Out of scope (do NOT build)
 
-| ID | Item |
-|----|------|
+| ID     | Item                    |
+| ------ | ----------------------- |
 | OUT-01 | Invoices (nota fiscal). |
-| OUT-02 | Resale between users. |
-| OUT-03 | Native app. |
-| OUT-04 | Password recovery. |
+| OUT-02 | Resale between users.   |
+| OUT-03 | Native app.             |
+| OUT-04 | Password recovery.      |
 
 ---
 
@@ -132,13 +132,13 @@ None is mandatory, but **all are considered in the evaluation**.
 
 Submit through https://elitedev.verzel.com.br/?elite-dev-2026-2 with:
 
-| ID | Field | Content |
-|----|-------|---------|
-| DEL-01 | Full name and e-mail | Contact data. |
-| DEL-02 | Repository | Public GitHub repository link. |
-| DEL-03 | More than one repository? | If front and back are separate, provide both. |
-| DEL-04 | Deploy | Public application link (**mandatory**). |
-| DEL-05 | AI usage | Where and how AI was used and what was reviewed or adjusted. If not used, say so. |
+| ID     | Field                     | Content                                                                           |
+| ------ | ------------------------- | --------------------------------------------------------------------------------- |
+| DEL-01 | Full name and e-mail      | Contact data.                                                                     |
+| DEL-02 | Repository                | Public GitHub repository link.                                                    |
+| DEL-03 | More than one repository? | If front and back are separate, provide both.                                     |
+| DEL-04 | Deploy                    | Public application link (**mandatory**).                                          |
+| DEL-05 | AI usage                  | Where and how AI was used and what was reviewed or adjusted. If not used, say so. |
 
 ---
 
@@ -178,7 +178,7 @@ Submit through https://elitedev.verzel.com.br/?elite-dev-2026-2 with:
 > - Só são aceitos em lotes ao vivo (entre início e fim).
 > - O primeiro lance deve ser ≥ ao lance inicial. Os seguintes devem ser ≥ ao lance atual + incremento mínimo.
 > - O licitante líder não pode cobrir o próprio lance.
->
+
 > - **Saldo comprometido:** Saldo disponível = saldo total - comprometido. Quando o licitante lidera, o valor fica comprometido; se superado, volta ao disponível imediatamente. O lance só é aceito se couber no disponível.
 > - **Prorrogação (anti-sniping):** Lance aceito nos últimos 2 minutos estende o fim do lote para +2 minutos.
 > - **Liquidação:** Ao encerrar, debita-se o valor do vencedor e credita-se ao leiloeiro, gerando o comprovante. Lotes sem lances fecham sem vencedor.

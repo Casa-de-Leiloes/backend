@@ -42,12 +42,6 @@
     "defaultBranch": "develop"
   },
   "files": {
-    "includes": [
-      "**",
-      "!**/node_modules",
-      "!**/dist",
-      "!**/coverage",
-      "!**/.superpowers"
-    ]
+    "includes": ["**", "!**/node_modules", "!**/dist", "!**/coverage", "!**/.superpowers"]
   }
 }

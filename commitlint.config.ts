@@ -1,14 +1,14 @@
-import type { UserConfig } from '@commitlint/types';
+import type { UserConfig } from "@commitlint/types";
 
 const config: UserConfig = {
-  extends: ['@commitlint/config-conventional'],
+  extends: ["@commitlint/config-conventional"],
   rules: {
-    'type-enum': [
+    "type-enum": [
       2,
-      'always',
-      ['feat', 'fix', 'docs', 'style', 'refactor', 'perf', 'test', 'chore', 'revert', 'ci'],
+      "always",
+      ["feat", "fix", "docs", "style", "refactor", "perf", "test", "chore", "revert", "ci"],
     ],
-    'subject-max-length': [2, 'always', 100],
+    "subject-max-length": [2, "always", 100],
   },
 };
 

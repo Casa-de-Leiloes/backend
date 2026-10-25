@@ -1,8 +1,8 @@
 import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
+import { createCipheriv, createHmac, randomBytes } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
+import { PrismaClient } from "@prisma/client";
 import argon2 from "argon2";
-import { createHmac, createCipheriv, createDecipheriv, randomBytes, timingSafeEqual } from "node:crypto";
 
 const FERNET_VERSION = 0x80;
 
@@ -30,10 +30,13 @@ function aliasEmail(email: string, lookupKey: string): string {
 }
 
 async function main() {
-  const databaseUrl = process.env["DATABASE_URL"];
+  const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) throw new Error("DATABASE_URL required");
-  const fernetKeys = (process.env["FERNET_KEYS"] ?? "").split(",").map((k) => k.trim()).filter(Boolean);
-  const emailLookupKey = process.env["EMAIL_LOOKUP_KEY"] ?? "";
+  const fernetKeys = (process.env.FERNET_KEYS ?? "")
+    .split(",")
+    .map((k) => k.trim())
+    .filter(Boolean);
+  const emailLookupKey = process.env.EMAIL_LOOKUP_KEY ?? "";
   const fernetKey = fernetKeys[0];
   if (!fernetKey) throw new Error("FERNET_KEYS required");
 
@@ -75,7 +78,10 @@ async function main() {
     update: {},
   });
 
-  for (const [email, idx] of [[bidder1Email, 1], [bidder2Email, 2]] as [string, number][]) {
+  for (const [email, idx] of [
+    [bidder1Email, 1],
+    [bidder2Email, 2],
+  ] as [string, number][]) {
     const bidderId = `seed-bidder-${idx}`;
     await prisma.user.upsert({
       where: { id: bidderId },
@@ -115,7 +121,8 @@ async function main() {
       externalId: "129884",
       title: "A Sunday on La Grande Jatte — 1884",
       attributes: { artist: "Georges Seurat", date: "1884–86", medium: "Oil on canvas" },
-      sourceImageUrl: "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f0ccea1517/full/843,/0/default.jpg",
+      sourceImageUrl:
+        "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f0ccea1517/full/843,/0/default.jpg",
     },
     update: {},
   });
@@ -131,7 +138,8 @@ async function main() {
       auctioneerId: auctioneer.id,
       snapshotId: snapshot.id,
       title: "A Sunday on La Grande Jatte",
-      description: "Georges Seurat's iconic pointillist painting from the Art Institute of Chicago.",
+      description:
+        "Georges Seurat's iconic pointillist painting from the Art Institute of Chicago.",
       category: "ART_INSTITUTE_CHICAGO",
       startingBidCents: 100000n,
       minIncrementCents: 5000n,

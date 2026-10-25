@@ -4,18 +4,18 @@ Real-time online auction platform built as a technical test for Verzel's Elite D
 
 ## Stack
 
-| Layer | Technology |
-|-------|-----------|
-| Runtime | Bun 1.x |
-| Framework | NestJS 10 |
-| Database | PostgreSQL 16 + Prisma 7 |
-| Cache / Queue | Redis 7 + BullMQ |
-| Auth | Better Auth 1.7 (email + password, argon2) |
-| Realtime | Server-Sent Events (SSE) via RxJS |
-| Validation | Zod |
-| Linting | Biome |
-| Testing | Jest 29 (unit + e2e) |
-| CI | GitHub Actions |
+| Layer         | Technology                                 |
+| ------------- | ------------------------------------------ |
+| Runtime       | Bun 1.x                                    |
+| Framework     | NestJS 10                                  |
+| Database      | PostgreSQL 16 + Prisma 7                   |
+| Cache / Queue | Redis 7 + BullMQ                           |
+| Auth          | Better Auth 1.7 (email + password, argon2) |
+| Realtime      | Server-Sent Events (SSE) via RxJS          |
+| Validation    | Zod                                        |
+| Linting       | Biome                                      |
+| Testing       | Jest 29 (unit + e2e)                       |
+| CI            | GitHub Actions                             |
 
 ## Features
 
@@ -69,25 +69,25 @@ API available at `http://localhost:3000`.
 
 ### Demo accounts (seeded)
 
-| Email | Password | Role |
-|-------|----------|------|
+| Email                 | Password       | Role       |
+| --------------------- | -------------- | ---------- |
 | `auctioneer@demo.com` | `Password123!` | AUCTIONEER |
-| `bidder1@demo.com` | `Password123!` | BIDDER |
-| `bidder2@demo.com` | `Password123!` | BIDDER |
+| `bidder1@demo.com`    | `Password123!` | BIDDER     |
+| `bidder2@demo.com`    | `Password123!` | BIDDER     |
 
 ## Environment Variables
 
-| Variable | Description |
-|----------|-------------|
-| `DATABASE_URL` | PostgreSQL connection string |
-| `REDIS_URL` | Redis connection URL |
-| `FERNET_KEYS` | Comma-separated base64url 32-byte keys for PII encryption |
-| `EMAIL_LOOKUP_KEY` | 32-byte key for HMAC email blind index |
-| `PSEUDONYM_KEY` | 32-byte key for deterministic bidder pseudonyms |
-| `AUDIT_SIGNING_KEY` | 32-byte key for HMAC bid-chain signatures |
-| `BETTER_AUTH_SECRET` | Secret for Better Auth session tokens |
-| `BETTER_AUTH_URL` | Public URL of this API |
-| `FRONTEND_ORIGIN` | Frontend origin for CORS |
+| Variable             | Description                                               |
+| -------------------- | --------------------------------------------------------- |
+| `DATABASE_URL`       | PostgreSQL connection string                              |
+| `REDIS_URL`          | Redis connection URL                                      |
+| `FERNET_KEYS`        | Comma-separated base64url 32-byte keys for PII encryption |
+| `EMAIL_LOOKUP_KEY`   | 32-byte key for HMAC email blind index                    |
+| `PSEUDONYM_KEY`      | 32-byte key for deterministic bidder pseudonyms           |
+| `AUDIT_SIGNING_KEY`  | 32-byte key for HMAC bid-chain signatures                 |
+| `BETTER_AUTH_SECRET` | Secret for Better Auth session tokens                     |
+| `BETTER_AUTH_URL`    | Public URL of this API                                    |
+| `FRONTEND_ORIGIN`    | Frontend origin for CORS                                  |
 
 Generate keys:
 
@@ -101,54 +101,54 @@ All routes are prefixed with `/api`.
 
 ### Auth
 
-| Method | Path | Description |
-|--------|------|-------------|
-| POST | `/auth/sign-up/email` | Register (body: `email, password, name, role`) |
-| POST | `/auth/sign-in/email` | Sign in (body: `email, password`) |
-| POST | `/auth/sign-out` | Sign out |
-| GET | `/auth/get-session` | Current session |
+| Method | Path                  | Description                                    |
+| ------ | --------------------- | ---------------------------------------------- |
+| POST   | `/auth/sign-up/email` | Register (body: `email, password, name, role`) |
+| POST   | `/auth/sign-in/email` | Sign in (body: `email, password`)              |
+| POST   | `/auth/sign-out`      | Sign out                                       |
+| GET    | `/auth/get-session`   | Current session                                |
 
 ### Lots
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/lots` | AUCTIONEER | Create lot |
-| GET | `/lots` | — | List lots (query: `status, limit, cursor`) |
-| GET | `/lots/:id` | — | Get lot detail |
-| DELETE | `/lots/:id` | AUCTIONEER | Cancel lot |
-| GET | `/lots/:id/position` | BIDDER | My rank and gap to lead |
+| Method | Path                 | Auth       | Description                                |
+| ------ | -------------------- | ---------- | ------------------------------------------ |
+| POST   | `/lots`              | AUCTIONEER | Create lot                                 |
+| GET    | `/lots`              | —          | List lots (query: `status, limit, cursor`) |
+| GET    | `/lots/:id`          | —          | Get lot detail                             |
+| DELETE | `/lots/:id`          | AUCTIONEER | Cancel lot                                 |
+| GET    | `/lots/:id/position` | BIDDER     | My rank and gap to lead                    |
 
 ### Bids
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| POST | `/lots/:id/bids` | BIDDER | Place bid |
-| GET | `/lots/:id/bids` | — | Bid history (with pseudonyms) |
-| GET | `/lots/:id/bids/events` | — | SSE live bid stream |
-| GET | `/lots/:id/audit` | — | Verify bid chain integrity |
+| Method | Path                    | Auth   | Description                   |
+| ------ | ----------------------- | ------ | ----------------------------- |
+| POST   | `/lots/:id/bids`        | BIDDER | Place bid                     |
+| GET    | `/lots/:id/bids`        | —      | Bid history (with pseudonyms) |
+| GET    | `/lots/:id/bids/events` | —      | SSE live bid stream           |
+| GET    | `/lots/:id/audit`       | —      | Verify bid chain integrity    |
 
 ### Wallet
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/wallets/me/balance` | BIDDER | Current balance |
-| POST | `/wallets/me/deposit` | BIDDER | Add funds |
-| GET | `/wallets/me/ledger` | BIDDER | Transaction history |
+| Method | Path                  | Auth   | Description         |
+| ------ | --------------------- | ------ | ------------------- |
+| GET    | `/wallets/me/balance` | BIDDER | Current balance     |
+| POST   | `/wallets/me/deposit` | BIDDER | Add funds           |
+| GET    | `/wallets/me/ledger`  | BIDDER | Transaction history |
 
 ### Users
 
-| Method | Path | Auth | Description |
-|--------|------|------|-------------|
-| GET | `/users/me/bids` | BIDDER | My bid history |
-| GET | `/users/me/wins` | BIDDER | My won auctions |
-| GET | `/users/me/export` | Any | LGPD data export |
+| Method | Path               | Auth   | Description      |
+| ------ | ------------------ | ------ | ---------------- |
+| GET    | `/users/me/bids`   | BIDDER | My bid history   |
+| GET    | `/users/me/wins`   | BIDDER | My won auctions  |
+| GET    | `/users/me/export` | Any    | LGPD data export |
 
 ### Health
 
-| Method | Path | Description |
-|--------|------|-------------|
-| GET | `/health/live` | Liveness check |
-| GET | `/health/ready` | Readiness check (DB + Redis) |
+| Method | Path            | Description                  |
+| ------ | --------------- | ---------------------------- |
+| GET    | `/health/live`  | Liveness check               |
+| GET    | `/health/ready` | Readiness check (DB + Redis) |
 
 ## Running Tests
 

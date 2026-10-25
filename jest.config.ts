@@ -1,33 +1,36 @@
-import type { Config } from 'jest';
+import type { Config } from "jest";
 
 const config: Config = {
-  moduleFileExtensions: ['js', 'mjs', 'cjs', 'json', 'ts'],
-  rootDir: 'src',
-  testRegex: '.*\\.(spec|e2e-spec)\\.ts$',
+  moduleFileExtensions: ["js", "mjs", "cjs", "json", "ts"],
+  rootDir: "src",
+  testRegex: ".*\\.(spec|e2e-spec)\\.ts$",
   transform: {
-    '^.+\\.(t|j)sx?$|^.+\\.mjs$': ['@swc/jest', {
-      jsc: {
-        parser: {
-          syntax: 'typescript',
-          tsx: false,
-          decorators: true,
+    "^.+\\.(t|j)sx?$|^.+\\.mjs$": [
+      "@swc/jest",
+      {
+        jsc: {
+          parser: {
+            syntax: "typescript",
+            tsx: false,
+            decorators: true,
+          },
+          target: "es2021",
+          transform: {
+            legacyDecorator: true,
+            decoratorMetadata: true,
+          },
         },
-        target: 'es2021',
-        transform: {
-          legacyDecorator: true,
-          decoratorMetadata: true,
+        module: {
+          type: "commonjs",
         },
       },
-      module: {
-        type: 'commonjs',
-      },
-    }],
+    ],
   },
   transformIgnorePatterns: [
-    'node_modules/(?!(@nestjs|nestjs-zod|zod|rxjs|@bullmq|bullmq|better-auth|@better-auth|better-call|@better-fetch|rou3|set-cookie-parser|@noble|nanostores|jose|defu|kysely)/)',
+    "node_modules/(?!(@nestjs|nestjs-zod|zod|rxjs|@bullmq|bullmq|better-auth|@better-auth|better-call|@better-fetch|rou3|set-cookie-parser|@noble|nanostores|jose|defu|kysely)/)",
   ],
-  collectCoverageFrom: ['**/*.(t|j)s', '!**/*.spec.(t|j)s', '!**/main.ts'],
-  coverageDirectory: '../coverage',
+  collectCoverageFrom: ["**/*.(t|j)s", "!**/*.spec.(t|j)s", "!**/main.ts"],
+  coverageDirectory: "../coverage",
   coverageThreshold: {
     global: {
       lines: 98,
@@ -36,10 +39,10 @@ const config: Config = {
       statements: 98,
     },
   },
-  setupFiles: ['<rootDir>/../test/jest-setup.ts'],
-  testEnvironment: 'node',
+  setupFiles: ["<rootDir>/../test/jest-setup.ts"],
+  testEnvironment: "node",
   moduleNameMapper: {
-    '^@/(.*)$': '<rootDir>/$1',
+    "^@/(.*)$": "<rootDir>/$1",
   },
 };
 
