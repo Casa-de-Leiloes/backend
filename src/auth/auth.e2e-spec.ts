@@ -10,7 +10,7 @@ beforeAll(async () => {
   app = module.createNestApplication();
   app.setGlobalPrefix("api", { exclude: ["health/live", "health/ready"] });
   await app.init();
-});
+}, 30_000);
 
 afterAll(async () => {
   await app.close();
@@ -24,6 +24,7 @@ describe("Auth e2e", () => {
   it("signs up as AUCTIONEER", async () => {
     const res = await request(app.getHttpServer())
       .post("/api/auth/sign-up/email")
+      .set("Origin", "http://localhost:5173")
       .send({ email, password, name: "Test Auctioneer", role: "AUCTIONEER" });
 
     expect([200, 201]).toContain(res.status);
@@ -32,6 +33,7 @@ describe("Auth e2e", () => {
   it("signs in", async () => {
     const res = await request(app.getHttpServer())
       .post("/api/auth/sign-in/email")
+      .set("Origin", "http://localhost:5173")
       .send({ email, password });
 
     expect([200, 201]).toContain(res.status);

@@ -17,15 +17,17 @@ beforeAll(async () => {
 
   await request(app.getHttpServer())
     .post("/api/auth/sign-up/email")
+    .set("Origin", "http://localhost:5173")
     .send({ email, password, name: "Wallet Bidder", role: "BIDDER" });
 
   const res = await request(app.getHttpServer())
     .post("/api/auth/sign-in/email")
+    .set("Origin", "http://localhost:5173")
     .send({ email, password });
 
   const setCookie = res.headers["set-cookie"];
   cookie = Array.isArray(setCookie) ? setCookie[0] : (setCookie ?? "");
-});
+}, 30_000);
 
 afterAll(async () => {
   await app.close();
