@@ -114,7 +114,9 @@ describe("BidsService", () => {
     expect(bid.id).toBe("bid-new");
     expect(bid.previousHash).toBe("genesis");
     expect(mockTx.wallet.update).toHaveBeenCalledWith(
-      expect.objectContaining({ data: expect.objectContaining({ committedCents: expect.anything() }) }),
+      expect.objectContaining({
+        data: expect.objectContaining({ committedCents: expect.anything() }),
+      }),
     );
     expect(mockTx.lot.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ currentBidCents: 1000n }) }),

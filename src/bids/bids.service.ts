@@ -1,7 +1,7 @@
 import { createHmac } from "node:crypto";
 import { BadRequestException, Injectable } from "@nestjs/common";
-import { LedgerEntryKind } from "@prisma/client";
 import type { Bid } from "@prisma/client";
+import { LedgerEntryKind } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 import { hashBid } from "./bid-chain";
 
@@ -89,11 +89,7 @@ export class BidsService {
       if (toCommit > available) throw new BadRequestException("INSUFFICIENT_BALANCE");
 
       // Release previous leader's committed funds
-      if (
-        lot.leadingBidderId &&
-        lot.leadingBidderId !== input.bidderId &&
-        lot.currentBidCents
-      ) {
+      if (lot.leadingBidderId && lot.leadingBidderId !== input.bidderId && lot.currentBidCents) {
         const prevWallet = await tx.wallet.findUniqueOrThrow({
           where: { userId: lot.leadingBidderId },
         });
