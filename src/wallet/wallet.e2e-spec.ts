@@ -31,7 +31,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-});
+}, 30_000);
 
 describe("Wallet e2e", () => {
   it("GET /wallets/me/balance returns zero balance for new user", async () => {

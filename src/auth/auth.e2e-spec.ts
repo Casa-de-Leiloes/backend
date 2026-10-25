@@ -14,7 +14,7 @@ beforeAll(async () => {
 
 afterAll(async () => {
   await app.close();
-});
+}, 30_000);
 
 describe("Auth e2e", () => {
   const email = `e2e-${Date.now()}@example.com`;
