@@ -1,6 +1,5 @@
 import { Test } from "@nestjs/testing";
 import { PrismaService } from "../prisma/prisma.service";
-import { WalletService } from "../wallet/wallet.service";
 import { BidsService } from "./bids.service";
 
 const futureDate = (minutesFromNow: number) => new Date(Date.now() + minutesFromNow * 60_000);
@@ -41,12 +40,6 @@ const mockPrisma = {
   $transaction: jest.fn(),
 };
 
-const mockWallet = {
-  commit: jest.fn(),
-  release: jest.fn(),
-  getWalletByUserId: jest.fn(),
-};
-
 describe("BidsService", () => {
   let svc: BidsService;
 
@@ -56,11 +49,7 @@ describe("BidsService", () => {
       async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
     );
     const module = await Test.createTestingModule({
-      providers: [
-        BidsService,
-        { provide: PrismaService, useValue: mockPrisma },
-        { provide: WalletService, useValue: mockWallet },
-      ],
+      providers: [BidsService, { provide: PrismaService, useValue: mockPrisma }],
     }).compile();
     svc = module.get(BidsService);
   });
@@ -93,9 +82,16 @@ describe("BidsService", () => {
     ).rejects.toThrow("BID_TOO_LOW");
   });
 
-  it("accepts first valid bid and updates lot", async () => {
+  it("accepts first valid bid, commits wallet, and updates lot", async () => {
     const lot = makeLot();
     mockTx.lot.findUnique.mockResolvedValue(lot);
+    mockTx.wallet.findUniqueOrThrow.mockResolvedValue({
+      id: "w-1",
+      totalCents: 50000n,
+      committedCents: 0n,
+    });
+    mockTx.wallet.update.mockResolvedValue({});
+    mockTx.walletLedgerEntry.create.mockResolvedValue({});
     mockTx.bid.create.mockResolvedValue({
       id: "bid-new",
       lotId: "lot-1",
@@ -108,7 +104,6 @@ describe("BidsService", () => {
       placedAt: new Date(),
     });
     mockTx.lot.update.mockResolvedValue({ ...lot, currentBidCents: 1000n });
-    mockWallet.getWalletByUserId.mockResolvedValue({ id: "w-1" });
 
     const bid = await svc.placeBid({
       lotId: "lot-1",
@@ -117,6 +112,10 @@ describe("BidsService", () => {
       amountCents: 1000n,
     });
     expect(bid.id).toBe("bid-new");
+    expect(bid.previousHash).toBe("genesis");
+    expect(mockTx.wallet.update).toHaveBeenCalledWith(
+      expect.objectContaining({ data: expect.objectContaining({ committedCents: expect.anything() }) }),
+    );
     expect(mockTx.lot.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ currentBidCents: 1000n }) }),
     );

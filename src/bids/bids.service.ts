@@ -1,8 +1,8 @@
 import { createHmac } from "node:crypto";
 import { BadRequestException, Injectable } from "@nestjs/common";
+import { LedgerEntryKind } from "@prisma/client";
 import type { Bid } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
-import { WalletService } from "../wallet/wallet.service";
 import { hashBid } from "./bid-chain";
 
 const ADJECTIVES = [
@@ -55,10 +55,7 @@ function signBid(hash: string, signingKey: string): string {
 export class BidsService {
   private readonly signingKey: string;
 
-  constructor(
-    private readonly prisma: PrismaService,
-    readonly _walletService: WalletService,
-  ) {
+  constructor(private readonly prisma: PrismaService) {
     this.signingKey = process.env.AUDIT_SIGNING_KEY ?? "";
   }
 
@@ -80,9 +77,57 @@ export class BidsService {
         throw new BadRequestException("BID_TOO_LOW");
       }
 
-      const prevHash = lot.chainHeadHash ?? "genesis";
-      const sequence = lot.bidCount + 1;
+      // Wallet: check available funds
+      const bidderWallet = await tx.wallet.findUniqueOrThrow({ where: { id: input.walletId } });
+      const available = bidderWallet.totalCents - bidderWallet.committedCents;
+      // Same bidder already leading — only commit the increment
+      const alreadyCommitted =
+        lot.leadingBidderId === input.bidderId && lot.currentBidCents !== null
+          ? lot.currentBidCents
+          : 0n;
+      const toCommit = input.amountCents - alreadyCommitted;
+      if (toCommit > available) throw new BadRequestException("INSUFFICIENT_BALANCE");
 
+      // Release previous leader's committed funds
+      if (
+        lot.leadingBidderId &&
+        lot.leadingBidderId !== input.bidderId &&
+        lot.currentBidCents
+      ) {
+        const prevWallet = await tx.wallet.findUniqueOrThrow({
+          where: { userId: lot.leadingBidderId },
+        });
+        await tx.wallet.update({
+          where: { id: prevWallet.id },
+          data: { committedCents: { decrement: lot.currentBidCents } },
+        });
+        await tx.walletLedgerEntry.create({
+          data: {
+            walletId: prevWallet.id,
+            kind: LedgerEntryKind.RELEASE,
+            amountCents: lot.currentBidCents,
+            lotId: input.lotId,
+          },
+        });
+      }
+
+      // Commit new amount
+      if (toCommit > 0n) {
+        await tx.wallet.update({
+          where: { id: input.walletId },
+          data: { committedCents: { increment: toCommit } },
+        });
+        await tx.walletLedgerEntry.create({
+          data: {
+            walletId: input.walletId,
+            kind: LedgerEntryKind.COMMIT,
+            amountCents: toCommit,
+            lotId: input.lotId,
+          },
+        });
+      }
+
+      const sequence = lot.bidCount + 1;
       const hash = hashBid({
         lotId: input.lotId,
         bidId: `${input.lotId}-${sequence}`,
@@ -90,7 +135,6 @@ export class BidsService {
         amountCents: input.amountCents,
         prevHash: lot.chainHeadHash,
       });
-
       const signature = signBid(hash, this.signingKey);
 
       const bid = await tx.bid.create({
@@ -99,7 +143,7 @@ export class BidsService {
           bidderId: input.bidderId,
           sequence,
           amountCents: input.amountCents,
-          previousHash: prevHash,
+          previousHash: lot.chainHeadHash ?? "genesis",
           hash,
           signature,
         },
