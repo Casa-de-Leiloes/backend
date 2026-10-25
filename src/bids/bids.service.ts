@@ -77,16 +77,14 @@ export class BidsService {
         throw new BadRequestException("BID_TOO_LOW");
       }
 
+      if (lot.leadingBidderId === input.bidderId) {
+        throw new BadRequestException("ALREADY_LEADING");
+      }
+
       // Wallet: check available funds
       const bidderWallet = await tx.wallet.findUniqueOrThrow({ where: { id: input.walletId } });
       const available = bidderWallet.totalCents - bidderWallet.committedCents;
-      // Same bidder already leading — only commit the increment
-      const alreadyCommitted =
-        lot.leadingBidderId === input.bidderId && lot.currentBidCents !== null
-          ? lot.currentBidCents
-          : 0n;
-      const toCommit = input.amountCents - alreadyCommitted;
-      if (toCommit > available) throw new BadRequestException("INSUFFICIENT_BALANCE");
+      if (input.amountCents > available) throw new BadRequestException("INSUFFICIENT_BALANCE");
 
       // Release previous leader's committed funds
       if (lot.leadingBidderId && lot.leadingBidderId !== input.bidderId && lot.currentBidCents) {
@@ -107,21 +105,19 @@ export class BidsService {
         });
       }
 
-      // Commit new amount
-      if (toCommit > 0n) {
-        await tx.wallet.update({
-          where: { id: input.walletId },
-          data: { committedCents: { increment: toCommit } },
-        });
-        await tx.walletLedgerEntry.create({
-          data: {
-            walletId: input.walletId,
-            kind: LedgerEntryKind.COMMIT,
-            amountCents: toCommit,
-            lotId: input.lotId,
-          },
-        });
-      }
+      // Commit full bid amount
+      await tx.wallet.update({
+        where: { id: input.walletId },
+        data: { committedCents: { increment: input.amountCents } },
+      });
+      await tx.walletLedgerEntry.create({
+        data: {
+          walletId: input.walletId,
+          kind: LedgerEntryKind.COMMIT,
+          amountCents: input.amountCents,
+          lotId: input.lotId,
+        },
+      });
 
       const sequence = lot.bidCount + 1;
       const hash = hashBid({

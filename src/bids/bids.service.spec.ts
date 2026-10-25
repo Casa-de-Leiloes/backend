@@ -82,6 +82,15 @@ describe("BidsService", () => {
     ).rejects.toThrow("BID_TOO_LOW");
   });
 
+  it("rejects bid from the leading bidder on their own lot", async () => {
+    mockTx.lot.findUnique.mockResolvedValue(
+      makeLot({ currentBidCents: 1000n, leadingBidderId: "user-1" }),
+    );
+    await expect(
+      svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1100n }),
+    ).rejects.toThrow("ALREADY_LEADING");
+  });
+
   it("accepts first valid bid, commits wallet, and updates lot", async () => {
     const lot = makeLot();
     mockTx.lot.findUnique.mockResolvedValue(lot);

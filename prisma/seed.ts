@@ -1,5 +1,5 @@
 import "dotenv/config";
-import { createCipheriv, createHmac, randomBytes } from "node:crypto";
+import { createCipheriv, createHash, createHmac, randomBytes } from "node:crypto";
 import { PrismaPg } from "@prisma/adapter-pg";
 import { PrismaClient } from "@prisma/client";
 import argon2 from "argon2";
@@ -128,16 +128,41 @@ async function main() {
   });
 
   const now = new Date();
-  const startsAt = new Date(now.getTime() + 60_000);
-  const endsAt = new Date(now.getTime() + 3_600_000);
+  const startsAt = new Date(now.getTime() - 600_000); // started 10 min ago
+  const endsAt = new Date(now.getTime() + 3_600_000); // ends in 1 hour
 
-  await prisma.lot.upsert({
+  const auditSigningKey = process.env.AUDIT_SIGNING_KEY ?? "seed-signing-key";
+
+  function hashBidEntry(
+    lotId: string,
+    sequence: number,
+    bidderId: string,
+    amountCents: bigint,
+    prevHash: string | null,
+  ): string {
+    const payload = [
+      lotId,
+      `${lotId}-${sequence}`,
+      bidderId,
+      amountCents.toString(),
+      prevHash ?? "genesis",
+    ].join("|");
+    return createHash("sha256").update(payload).digest("hex");
+  }
+
+  function signHash(hash: string): string {
+    return createHmac("sha256", auditSigningKey).update(hash).digest("hex");
+  }
+
+  const existingLot = await prisma.lot.findUnique({ where: { id: "seed-lot-1" } });
+
+  const lot = await prisma.lot.upsert({
     where: { id: "seed-lot-1" },
     create: {
       id: "seed-lot-1",
       auctioneerId: auctioneer.id,
       snapshotId: snapshot.id,
-      title: "A Sunday on La Grande Jatte",
+      title: "A Sunday on La Grande Jatte — 1884",
       description:
         "Georges Seurat's iconic pointillist painting from the Art Institute of Chicago.",
       category: "ART_INSTITUTE_CHICAGO",
@@ -146,10 +171,64 @@ async function main() {
       startsAt,
       endsAt,
       originalEndsAt: endsAt,
-      status: "SCHEDULED",
+      status: "LIVE",
     },
-    update: {},
+    update: { status: "LIVE", endsAt, startsAt },
   });
+
+  // Only seed bids if lot was freshly created (no existing bids)
+  const existingBidCount = await prisma.bid.count({ where: { lotId: lot.id } });
+  if (!existingLot && existingBidCount === 0) {
+    const bidder1Id = "seed-bidder-0";
+    const bidder2Id = "seed-bidder-1";
+    const lotId = lot.id;
+
+    const hash1 = hashBidEntry(lotId, 1, bidder1Id, 150000n, null);
+    const sig1 = signHash(hash1);
+    await prisma.bid.create({
+      data: {
+        lotId,
+        bidderId: bidder1Id,
+        sequence: 1,
+        amountCents: 150000n,
+        previousHash: "genesis",
+        hash: hash1,
+        signature: sig1,
+      },
+    });
+
+    const hash2 = hashBidEntry(lotId, 2, bidder2Id, 160000n, hash1);
+    const sig2 = signHash(hash2);
+    await prisma.bid.create({
+      data: {
+        lotId,
+        bidderId: bidder2Id,
+        sequence: 2,
+        amountCents: 160000n,
+        previousHash: hash1,
+        hash: hash2,
+        signature: sig2,
+      },
+    });
+
+    // Update lot with chain state
+    await prisma.lot.update({
+      where: { id: lotId },
+      data: {
+        currentBidCents: 160000n,
+        leadingBidderId: bidder2Id,
+        chainHeadHash: hash2,
+        chainHeadSignature: sig2,
+        bidCount: 2,
+      },
+    });
+
+    // Commit bidder2's wallet (they are leading)
+    await prisma.wallet.update({
+      where: { userId: bidder2Id },
+      data: { committedCents: 160000n },
+    });
+  }
 
   console.log("Seeding complete!");
   console.log("  Auctioneer: auctioneer@demo.com / Password123!");
