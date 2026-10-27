@@ -114,112 +114,75 @@ async function main() {
     });
   }
 
-  // ── AIC API helpers ───────────────────────────────────────────────────────
-  const AIC_BASE_URL = "https://api.artic.edu/api/v1";
-  const AIC_FIELDS = "id,title,description,image_id,artist_display,date_display,medium_display";
+  // ── Met Museum API helpers ────────────────────────────────────────────────
+  const MET_BASE = "https://collectionapi.metmuseum.org/public/collection/v1/objects";
 
-  interface AicArtwork {
-    id: number;
+  interface MetArtwork {
+    objectID: number;
     title: string;
-    description: string | null;
-    image_id: string | null;
-    artist_display: string | null;
-    date_display: string | null;
-    medium_display: string | null;
+    artistDisplayName: string;
+    objectDate: string;
+    medium: string;
+    primaryImage: string;
+    primaryImageSmall: string;
+    department: string;
+    isPublicDomain: boolean;
   }
 
-  async function fetchAicByIds(ids: number[]): Promise<Map<number, AicArtwork>> {
-    const url = `${AIC_BASE_URL}/artworks?ids=${ids.join(",")}&fields=${AIC_FIELDS}&limit=${ids.length}`;
-    const res = await fetch(url, {
-      headers: {
-        "AIC-User-Agent": "AuctionHouse/1.0",
-        "User-Agent": "Mozilla/5.0 (compatible; AuctionHouse/1.0)",
-      },
-    });
-    if (!res.ok) throw new Error(`AIC API error: ${res.status}`);
-    const json = (await res.json()) as { data: AicArtwork[] };
-    return new Map(json.data.map((a) => [a.id, a]));
-  }
-
-  // Wikimedia Commons API: search for artwork image (accessible from Node.js backend)
-  async function fetchWikimediaImage(query: string): Promise<string | null> {
+  async function fetchMetArtwork(id: number): Promise<MetArtwork | null> {
     try {
-      const headers = { "User-Agent": "AuctionHouse/1.0 (seed; auction@demo.com)" };
-      // Search Commons for the file
-      const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&srlimit=1&format=json`;
-      const sr = await fetch(searchUrl, { headers });
-      if (!sr.ok) return null;
-      const srJson = (await sr.json()) as { query: { search: Array<{ title: string }> } };
-      const fileTitle = srJson.query.search[0]?.title;
-      if (!fileTitle) return null;
-      // Get thumbnail URL for the file
-      const infoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(fileTitle)}&prop=imageinfo&iiprop=url&iiurlwidth=1024&format=json`;
-      const ir = await fetch(infoUrl, { headers });
-      if (!ir.ok) return null;
-      const irJson = (await ir.json()) as {
-        query: { pages: Record<string, { imageinfo?: Array<{ thumburl: string }> }> };
-      };
-      const pages = Object.values(irJson.query.pages);
-      const thumbUrl = pages[0]?.imageinfo?.[0]?.thumburl ?? null;
-      if (!thumbUrl) return null;
-      // Normalize: thumb.wikimedia.org → upload.wikimedia.org, strip query params
-      return thumbUrl
-        .replace(/^https?:\/\/thumb\.wikimedia\.org/, "https://upload.wikimedia.org")
-        .split("?")[0];
+      const r = await fetch(`${MET_BASE}/${id}`, {
+        headers: { "User-Agent": "AuctionHouse/1.0" },
+        signal: AbortSignal.timeout(10_000),
+      });
+      if (!r.ok) return null;
+      return (await r.json()) as MetArtwork;
     } catch {
       return null;
     }
   }
   // ─────────────────────────────────────────────────────────────────────────
 
-  // Lot configurations — artworkId references AIC collection IDs
+  // Lot configurations — objectID references Met Museum collection
   const LOT_CONFIGS: Array<{
     id: string;
-    artworkId: number;
+    metId: number;
     status: "LIVE" | "SCHEDULED" | "CLOSED";
     offsetMs: number;
     startingBidCents: bigint;
     lotCategory: "FINE_ART" | "JEWELRY" | "WATCHES" | "ANTIQUITIES" | "NUMISMATICS" | "FASHION" | "VEHICLES" | "BOOKS" | "WINE" | "OTHER";
   }> = [
-    { id: "seed-lot-1",  artworkId: 27992,  status: "LIVE",      offsetMs: 0,                  startingBidCents: 100000n, lotCategory: "FINE_ART" }, // La Grande Jatte — Seurat
-    { id: "seed-lot-2",  artworkId: 8991,   status: "LIVE",      offsetMs: 0,                  startingBidCents:  80000n, lotCategory: "FINE_ART" }, // Improvisation No. 30 — Kandinsky
-    { id: "seed-lot-3",  artworkId: 24645,  status: "SCHEDULED", offsetMs: 2 * 3_600_000,      startingBidCents:  50000n, lotCategory: "FINE_ART" }, // Under the Wave off Kanagawa
-    { id: "seed-lot-4",  artworkId: 20684,  status: "SCHEDULED", offsetMs: 5 * 3_600_000,      startingBidCents: 120000n, lotCategory: "FINE_ART" }, // Paris Street; Rainy Day — Caillebotte
-    { id: "seed-lot-5",  artworkId: 14655,  status: "SCHEDULED", offsetMs: 8 * 3_600_000,      startingBidCents:  90000n, lotCategory: "FINE_ART" }, // Two Sisters — Renoir
-    { id: "seed-lot-6",  artworkId: 60755,  status: "SCHEDULED", offsetMs: 24 * 3_600_000,     startingBidCents:  75000n, lotCategory: "FINE_ART" }, // Landscape with Ruins — Seghers
-    { id: "seed-lot-7",  artworkId: 80607,  status: "SCHEDULED", offsetMs: 48 * 3_600_000,     startingBidCents:  60000n, lotCategory: "FINE_ART" }, // Self-Portrait
-    { id: "seed-lot-8",  artworkId: 16487,  status: "CLOSED",    offsetMs: -3 * 3_600_000,     startingBidCents:  85000n, lotCategory: "FINE_ART" }, // Bay of Marseille — Cézanne
-    { id: "seed-lot-9",  artworkId: 129884, status: "CLOSED",    offsetMs: -6 * 3_600_000,     startingBidCents:  70000n, lotCategory: "FINE_ART" }, // Starry Night and the Astronauts
+    { id: "seed-lot-1", metId: 436535,  status: "LIVE",      offsetMs: 0,              startingBidCents: 100000n, lotCategory: "FINE_ART" }, // Wheat Field with Cypresses — Van Gogh
+    { id: "seed-lot-2", metId: 437881,  status: "LIVE",      offsetMs: 0,              startingBidCents:  80000n, lotCategory: "FINE_ART" }, // Young Woman with Water Pitcher — Vermeer
+    { id: "seed-lot-3", metId: 45434,   status: "SCHEDULED", offsetMs: 2 * 3_600_000,  startingBidCents:  50000n, lotCategory: "FINE_ART" }, // Under the Wave off Kanagawa — Hokusai
+    { id: "seed-lot-4", metId: 11417,   status: "SCHEDULED", offsetMs: 5 * 3_600_000,  startingBidCents: 120000n, lotCategory: "FINE_ART" }, // Washington Crossing — Leutze
+    { id: "seed-lot-5", metId: 437980,  status: "SCHEDULED", offsetMs: 8 * 3_600_000,  startingBidCents:  90000n, lotCategory: "FINE_ART" }, // Cypresses — Van Gogh
+    { id: "seed-lot-6", metId: 436121,  status: "SCHEDULED", offsetMs: 24 * 3_600_000, startingBidCents:  75000n, lotCategory: "FINE_ART" }, // Woman Seated beside Vase — Degas
+    { id: "seed-lot-7", metId: 437984,  status: "SCHEDULED", offsetMs: 48 * 3_600_000, startingBidCents:  60000n, lotCategory: "FINE_ART" }, // La Berceuse — Van Gogh
+    { id: "seed-lot-8", metId: 436529,  status: "CLOSED",    offsetMs: -3 * 3_600_000, startingBidCents:  85000n, lotCategory: "FINE_ART" }, // L'Arlésienne — Van Gogh
+    { id: "seed-lot-9", metId: 10481,   status: "CLOSED",    offsetMs: -6 * 3_600_000, startingBidCents:  70000n, lotCategory: "FINE_ART" }, // Heart of the Andes — Church
   ];
 
-  const allIds = LOT_CONFIGS.map((c) => c.artworkId);
-  console.log(`Fetching ${allIds.length} artworks from AIC API...`);
-  const artworksById = await fetchAicByIds(allIds);
-  console.log(`  Received ${artworksById.size} artworks.`);
-
-  // Upsert snapshots — metadata from AIC, images from Wikipedia API
-  console.log("  Fetching artwork images from Wikipedia API...");
+  console.log(`Fetching ${LOT_CONFIGS.length} artworks from Met Museum API...`);
   const snapshotByLotId = new Map<string, { id: string; title: string }>();
   for (const cfg of LOT_CONFIGS) {
-    const artwork = artworksById.get(cfg.artworkId);
-    if (!artwork) {
-      console.warn(`  Artwork ${cfg.artworkId} not found, skipping ${cfg.id}`);
+    const artwork = await fetchMetArtwork(cfg.metId);
+    if (!artwork || !artwork.isPublicDomain) {
+      console.warn(`  ${cfg.metId} not found or not public domain, skipping ${cfg.id}`);
       continue;
     }
-    // Wikimedia Commons API — proxiable image URL for our backend proxy to serve
-    const searchQuery = `${artwork.title} ${artwork.artist_display?.split(",")[0] ?? ""}`.trim();
-    const sourceImageUrl = await fetchWikimediaImage(searchQuery);
-    console.log(`    ${artwork.title.slice(0, 40)}: ${sourceImageUrl ? "✓" : "✗"}`);
+    const sourceImageUrl = artwork.primaryImage || undefined;
+    console.log(`  ${artwork.title.slice(0, 40)}: ${sourceImageUrl ? "✓" : "✗"}`);
     const snap = await prisma.catalogItemSnapshot.upsert({
-      where: { provider_externalId: { provider: "ART_INSTITUTE_CHICAGO", externalId: String(artwork.id) } },
+      where: { provider_externalId: { provider: "ART_INSTITUTE_CHICAGO", externalId: String(cfg.metId) } },
       create: {
         provider: "ART_INSTITUTE_CHICAGO",
-        externalId: String(artwork.id),
+        externalId: String(cfg.metId),
         title: artwork.title,
         attributes: {
-          artist: artwork.artist_display ?? null,
-          date: artwork.date_display ?? null,
-          medium: artwork.medium_display ?? null,
+          artist: artwork.artistDisplayName || null,
+          date: artwork.objectDate || null,
+          medium: artwork.medium || null,
         },
         ...(sourceImageUrl ? { sourceImageUrl } : {}),
       },
@@ -233,7 +196,7 @@ async function main() {
 
   // seed-lot-1 snapshot reference (used for bid seeding below)
   const lot1Snap = snapshotByLotId.get("seed-lot-1");
-  if (!lot1Snap) throw new Error("seed-lot-1 artwork missing from API response");
+  if (!lot1Snap) throw new Error("seed-lot-1 artwork missing from Met Museum API response");
   const snapshot = { id: lot1Snap.id };
 
   const now = new Date();
@@ -263,15 +226,16 @@ async function main() {
     return createHmac("sha256", auditSigningKey).update(hash).digest("hex");
   }
 
-  const lot1Artwork = artworksById.get(27992);
+  const lot1SnapRef = snapshotByLotId.get("seed-lot-1");
+  if (!lot1SnapRef) throw new Error("seed-lot-1 artwork missing from Met Museum response");
   const lot = await prisma.lot.upsert({
     where: { id: "seed-lot-1" },
     create: {
       id: "seed-lot-1",
       auctioneerId: auctioneer.id,
       snapshotId: snapshot.id,
-      title: lot1Artwork?.title ?? "A Sunday on La Grande Jatte — 1884",
-      description: lot1Artwork?.description ?? "Georges Seurat's iconic pointillist painting.",
+      title: lot1SnapRef.title,
+      description: "From the Met Museum open-access collection. Public domain.",
       category: "ART_INSTITUTE_CHICAGO",
       lotCategory: "FINE_ART",
       startingBidCents: 100000n,
@@ -338,12 +302,11 @@ async function main() {
     });
   }
 
-  // ── Remaining lots from AIC API data ────────────────────────────────────
+  // ── Remaining lots from Met Museum data ──────────────────────────────────
   for (const cfg of LOT_CONFIGS.filter((c) => c.id !== "seed-lot-1")) {
     const snapRef = snapshotByLotId.get(cfg.id);
     if (!snapRef) continue;
 
-    const artwork = artworksById.get(cfg.artworkId);
     const lotStartsAt = cfg.status === "CLOSED"
       ? new Date(now.getTime() + cfg.offsetMs - 3_600_000)
       : new Date(now.getTime() + cfg.offsetMs);
@@ -357,8 +320,8 @@ async function main() {
         id: cfg.id,
         auctioneerId: auctioneer.id,
         snapshotId: snapRef.id,
-        title: artwork?.title ?? snapRef.title,
-        description: artwork?.description ?? null,
+        title: snapRef.title,
+        description: "From the Met Museum open-access collection. Public domain.",
         category: "ART_INSTITUTE_CHICAGO",
         lotCategory: cfg.lotCategory,
         startingBidCents: cfg.startingBidCents,
@@ -373,7 +336,7 @@ async function main() {
         status: cfg.status,
         lotCategory: cfg.lotCategory,
         snapshotId: snapRef.id,
-        title: artwork?.title ?? snapRef.title,
+        title: snapRef.title,
       },
     });
   }

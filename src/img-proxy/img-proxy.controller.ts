@@ -8,9 +8,7 @@ import {
 import type { Response } from "express";
 
 const ALLOWED_HOSTS = new Set([
-  "www.artic.edu",
-  "artic.edu",
-  "iiif.artic.edu",
+  "images.metmuseum.org",
   "upload.wikimedia.org",
   "thumb.wikimedia.org",
   "cards.scryfall.io",
