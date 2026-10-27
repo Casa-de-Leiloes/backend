@@ -228,6 +228,130 @@ async function main() {
     });
   }
 
+  // ── Extra lots ────────────────────────────────────────────────────────────
+  const extraLots: {
+    id: string;
+    externalId: string;
+    title: string;
+    description: string;
+    artist: string;
+    date: string;
+    imageUrl: string;
+    lotCategory: "FINE_ART" | "JEWELRY" | "WATCHES" | "ANTIQUITIES" | "NUMISMATICS" | "FASHION" | "VEHICLES" | "BOOKS" | "WINE" | "OTHER";
+    startingBidCents: bigint;
+    status: "SCHEDULED" | "LIVE" | "CLOSED";
+    offsetMs: number; // offset from now for startsAt / endsAt
+  }[] = [
+    {
+      id: "seed-lot-2",
+      externalId: "28560",
+      title: "A Grande Onda de Kanagawa",
+      description: "Famosa gravura em madeira de Hokusai, circa 1831, representando a força das ondas do oceano.",
+      artist: "Katsushika Hokusai",
+      date: "ca. 1831",
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/1280px-Tsunami_by_hokusai_19th_century.jpg",
+      lotCategory: "FINE_ART",
+      startingBidCents: 50000n,
+      status: "SCHEDULED",
+      offsetMs: 2 * 3_600_000, // starts in 2h
+    },
+    {
+      id: "seed-lot-3",
+      externalId: "14966",
+      title: "Noite Estrelada",
+      description: "Obra-prima de Vincent van Gogh pintada em junho de 1889 durante sua estadia no asilo em Saint-Rémy-de-Provence.",
+      artist: "Vincent van Gogh",
+      date: "1889",
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
+      lotCategory: "FINE_ART",
+      startingBidCents: 200000n,
+      status: "SCHEDULED",
+      offsetMs: 5 * 3_600_000, // starts in 5h
+    },
+    {
+      id: "seed-lot-4",
+      externalId: "66039",
+      title: "Moça com Brinco de Pérola",
+      description: "Obra de Johannes Vermeer, circa 1665. Considerada a 'Mona Lisa do Norte', retrata uma jovem com um exótico brinco de pérola.",
+      artist: "Johannes Vermeer",
+      date: "ca. 1665",
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Girl_with_a_Pearl_Earring.jpg/1280px-Girl_with_a_Pearl_Earring.jpg",
+      lotCategory: "FINE_ART",
+      startingBidCents: 150000n,
+      status: "SCHEDULED",
+      offsetMs: 24 * 3_600_000, // starts in 24h
+    },
+    {
+      id: "seed-lot-5",
+      externalId: "87479",
+      title: "O Grito",
+      description: "Ícone expressionista de Edvard Munch, 1893. Uma das imagens mais reconhecíveis da história da arte ocidental.",
+      artist: "Edvard Munch",
+      date: "1893",
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/The_Scream.jpg/1280px-The_Scream.jpg",
+      lotCategory: "FINE_ART",
+      startingBidCents: 180000n,
+      status: "CLOSED",
+      offsetMs: -3 * 3_600_000, // ended 3h ago
+    },
+    {
+      id: "seed-lot-6",
+      externalId: "11279",
+      title: "American Gothic",
+      description: "Pintura icônica de Grant Wood, 1930, retratando um fazendeiro americano e uma mulher diante de uma casa de estilo gótico.",
+      artist: "Grant Wood",
+      date: "1930",
+      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg/1280px-Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg",
+      lotCategory: "FINE_ART",
+      startingBidCents: 80000n,
+      status: "CLOSED",
+      offsetMs: -6 * 3_600_000, // ended 6h ago
+    },
+  ];
+
+  for (const extra of extraLots) {
+    const snap = await prisma.catalogItemSnapshot.upsert({
+      where: { provider_externalId: { provider: "ART_INSTITUTE_CHICAGO", externalId: extra.externalId } },
+      create: {
+        provider: "ART_INSTITUTE_CHICAGO",
+        externalId: extra.externalId,
+        title: extra.title,
+        attributes: { artist: extra.artist, date: extra.date },
+        sourceImageUrl: extra.imageUrl,
+      },
+      update: { sourceImageUrl: extra.imageUrl },
+    });
+
+    const lotStartsAt = new Date(now.getTime() + (extra.status === "CLOSED" ? extra.offsetMs - 3_600_000 : extra.offsetMs));
+    const lotEndsAt = new Date(now.getTime() + (extra.status === "CLOSED" ? extra.offsetMs : extra.offsetMs + 4 * 3_600_000));
+
+    await prisma.lot.upsert({
+      where: { id: extra.id },
+      create: {
+        id: extra.id,
+        auctioneerId: auctioneer.id,
+        snapshotId: snap.id,
+        title: extra.title,
+        description: extra.description,
+        category: "ART_INSTITUTE_CHICAGO",
+        lotCategory: extra.lotCategory,
+        startingBidCents: extra.startingBidCents,
+        minIncrementCents: 5000n,
+        startsAt: lotStartsAt,
+        endsAt: lotEndsAt,
+        originalEndsAt: lotEndsAt,
+        status: extra.status,
+        ...(extra.status === "CLOSED" ? { closedAt: lotEndsAt } : {}),
+      },
+      update: {
+        status: extra.status,
+        lotCategory: extra.lotCategory,
+        snapshotId: snap.id,
+      },
+    });
+  }
+  // ── End extra lots ─────────────────────────────────────────────────────────
+
   console.log("Seeding complete!");
   console.log("  Auctioneer: auctioneer@demo.com / Password123!");
   console.log("  Bidder 1:   bidder1@demo.com / Password123!");
