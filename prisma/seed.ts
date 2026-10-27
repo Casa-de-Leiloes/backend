@@ -121,10 +121,9 @@ async function main() {
       externalId: "129884",
       title: "A Sunday on La Grande Jatte — 1884",
       attributes: { artist: "Georges Seurat", date: "1884–86", medium: "Oil on canvas" },
-      sourceImageUrl:
-        "https://www.artic.edu/iiif/2/2d484387-2509-5e8e-2c43-22f0ccea1517/full/843,/0/default.jpg",
+      sourceImageUrl: "/images/la-grande-jatte.svg",
     },
-    update: {},
+    update: { sourceImageUrl: "/images/la-grande-jatte.svg" },
   });
 
   const now = new Date();
@@ -154,8 +153,6 @@ async function main() {
     return createHmac("sha256", auditSigningKey).update(hash).digest("hex");
   }
 
-  const existingLot = await prisma.lot.findUnique({ where: { id: "seed-lot-1" } });
-
   const lot = await prisma.lot.upsert({
     where: { id: "seed-lot-1" },
     create: {
@@ -176,11 +173,11 @@ async function main() {
     update: { status: "LIVE", endsAt, startsAt },
   });
 
-  // Only seed bids if lot was freshly created (no existing bids)
+  // Seed bids if none exist yet
   const existingBidCount = await prisma.bid.count({ where: { lotId: lot.id } });
-  if (!existingLot && existingBidCount === 0) {
-    const bidder1Id = "seed-bidder-0";
-    const bidder2Id = "seed-bidder-1";
+  if (existingBidCount === 0) {
+    const bidder1Id = "seed-bidder-1";
+    const bidder2Id = "seed-bidder-2";
     const lotId = lot.id;
 
     const hash1 = hashBidEntry(lotId, 1, bidder1Id, 150000n, null);
