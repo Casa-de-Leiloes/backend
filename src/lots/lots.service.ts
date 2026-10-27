@@ -1,5 +1,5 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import type { CatalogItemSnapshot, CatalogProvider, Lot, LotStatus } from "@prisma/client";
+import type { CatalogItemSnapshot, CatalogProvider, Lot, LotCategory, LotStatus } from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
 
 export interface CreateLotInput {
@@ -7,7 +7,9 @@ export interface CreateLotInput {
   snapshotId: string;
   title: string;
   description?: string;
+  additionalImages?: string[];
   category: CatalogProvider;
+  lotCategory?: LotCategory;
   startingBidCents: bigint;
   minIncrementCents: bigint;
   startsAt: Date;
@@ -40,7 +42,9 @@ export class LotsService {
         snapshotId: input.snapshotId,
         title: input.title,
         description: input.description,
+        additionalImages: input.additionalImages ?? [],
         category: input.category,
+        lotCategory: input.lotCategory ?? "OTHER",
         startingBidCents: input.startingBidCents,
         minIncrementCents: input.minIncrementCents,
         startsAt: input.startsAt,

@@ -114,17 +114,95 @@ async function main() {
     });
   }
 
-  const snapshot = await prisma.catalogItemSnapshot.upsert({
-    where: { provider_externalId: { provider: "ART_INSTITUTE_CHICAGO", externalId: "129884" } },
-    create: {
-      provider: "ART_INSTITUTE_CHICAGO",
-      externalId: "129884",
-      title: "A Sunday on La Grande Jatte — 1884",
-      attributes: { artist: "Georges Seurat", date: "1884–86", medium: "Oil on canvas" },
-      sourceImageUrl: "/images/la-grande-jatte.svg",
-    },
-    update: { sourceImageUrl: "/images/la-grande-jatte.svg" },
-  });
+  // ── AIC API helpers ───────────────────────────────────────────────────────
+  const AIC_BASE_URL = "https://api.artic.edu/api/v1";
+  const AIC_IIIF_BASE = "https://www.artic.edu/iiif/2";
+  const AIC_FIELDS = "id,title,description,image_id,artist_display,date_display,medium_display";
+
+  interface AicArtwork {
+    id: number;
+    title: string;
+    description: string | null;
+    image_id: string | null;
+    artist_display: string | null;
+    date_display: string | null;
+    medium_display: string | null;
+  }
+
+  async function fetchAicByIds(ids: number[]): Promise<Map<number, AicArtwork>> {
+    const url = `${AIC_BASE_URL}/artworks?ids=${ids.join(",")}&fields=${AIC_FIELDS}&limit=${ids.length}`;
+    const res = await fetch(url, {
+      headers: {
+        "AIC-User-Agent": "AuctionHouse/1.0",
+        "User-Agent": "Mozilla/5.0 (compatible; AuctionHouse/1.0)",
+      },
+    });
+    if (!res.ok) throw new Error(`AIC API error: ${res.status}`);
+    const json = (await res.json()) as { data: AicArtwork[] };
+    return new Map(json.data.map((a) => [a.id, a]));
+  }
+
+  function aicImageUrl(imageId: string): string {
+    return `${AIC_IIIF_BASE}/${imageId}/full/843,/0/default.jpg`;
+  }
+  // ─────────────────────────────────────────────────────────────────────────
+
+  // Lot configurations — artworkId references AIC collection IDs
+  const LOT_CONFIGS: Array<{
+    id: string;
+    artworkId: number;
+    status: "LIVE" | "SCHEDULED" | "CLOSED";
+    offsetMs: number;
+    startingBidCents: bigint;
+    lotCategory: "FINE_ART" | "JEWELRY" | "WATCHES" | "ANTIQUITIES" | "NUMISMATICS" | "FASHION" | "VEHICLES" | "BOOKS" | "WINE" | "OTHER";
+  }> = [
+    { id: "seed-lot-1",  artworkId: 27992,  status: "LIVE",      offsetMs: 0,                  startingBidCents: 100000n, lotCategory: "FINE_ART" }, // La Grande Jatte — Seurat
+    { id: "seed-lot-2",  artworkId: 8991,   status: "LIVE",      offsetMs: 0,                  startingBidCents:  80000n, lotCategory: "FINE_ART" }, // Improvisation No. 30 — Kandinsky
+    { id: "seed-lot-3",  artworkId: 24645,  status: "SCHEDULED", offsetMs: 2 * 3_600_000,      startingBidCents:  50000n, lotCategory: "FINE_ART" }, // Under the Wave off Kanagawa
+    { id: "seed-lot-4",  artworkId: 20684,  status: "SCHEDULED", offsetMs: 5 * 3_600_000,      startingBidCents: 120000n, lotCategory: "FINE_ART" }, // Paris Street; Rainy Day — Caillebotte
+    { id: "seed-lot-5",  artworkId: 14655,  status: "SCHEDULED", offsetMs: 8 * 3_600_000,      startingBidCents:  90000n, lotCategory: "FINE_ART" }, // Two Sisters — Renoir
+    { id: "seed-lot-6",  artworkId: 60755,  status: "SCHEDULED", offsetMs: 24 * 3_600_000,     startingBidCents:  75000n, lotCategory: "FINE_ART" }, // Landscape with Ruins — Seghers
+    { id: "seed-lot-7",  artworkId: 80607,  status: "SCHEDULED", offsetMs: 48 * 3_600_000,     startingBidCents:  60000n, lotCategory: "FINE_ART" }, // Self-Portrait
+    { id: "seed-lot-8",  artworkId: 16487,  status: "CLOSED",    offsetMs: -3 * 3_600_000,     startingBidCents:  85000n, lotCategory: "FINE_ART" }, // Bay of Marseille — Cézanne
+    { id: "seed-lot-9",  artworkId: 129884, status: "CLOSED",    offsetMs: -6 * 3_600_000,     startingBidCents:  70000n, lotCategory: "FINE_ART" }, // Starry Night and the Astronauts
+  ];
+
+  const allIds = LOT_CONFIGS.map((c) => c.artworkId);
+  console.log(`Fetching ${allIds.length} artworks from AIC API...`);
+  const artworksById = await fetchAicByIds(allIds);
+  console.log(`  Received ${artworksById.size} artworks.`);
+
+  // Upsert snapshots from live API data
+  const snapshotByLotId = new Map<string, { id: string; title: string }>();
+  for (const cfg of LOT_CONFIGS) {
+    const artwork = artworksById.get(cfg.artworkId);
+    if (!artwork) {
+      console.warn(`  Artwork ${cfg.artworkId} not found, skipping ${cfg.id}`);
+      continue;
+    }
+    const sourceImageUrl = artwork.image_id ? aicImageUrl(artwork.image_id) : null;
+    const snap = await prisma.catalogItemSnapshot.upsert({
+      where: { provider_externalId: { provider: "ART_INSTITUTE_CHICAGO", externalId: String(artwork.id) } },
+      create: {
+        provider: "ART_INSTITUTE_CHICAGO",
+        externalId: String(artwork.id),
+        title: artwork.title,
+        attributes: {
+          artist: artwork.artist_display ?? null,
+          date: artwork.date_display ?? null,
+          medium: artwork.medium_display ?? null,
+        },
+        sourceImageUrl,
+      },
+      update: { sourceImageUrl, title: artwork.title },
+    });
+    snapshotByLotId.set(cfg.id, { id: snap.id, title: artwork.title });
+  }
+
+  // seed-lot-1 snapshot reference (used for bid seeding below)
+  const lot1Snap = snapshotByLotId.get("seed-lot-1");
+  if (!lot1Snap) throw new Error("seed-lot-1 artwork missing from API response");
+  const snapshot = { id: lot1Snap.id };
 
   const now = new Date();
   const startsAt = new Date(now.getTime() - 600_000); // started 10 min ago
@@ -153,15 +231,15 @@ async function main() {
     return createHmac("sha256", auditSigningKey).update(hash).digest("hex");
   }
 
+  const lot1Artwork = artworksById.get(27992);
   const lot = await prisma.lot.upsert({
     where: { id: "seed-lot-1" },
     create: {
       id: "seed-lot-1",
       auctioneerId: auctioneer.id,
       snapshotId: snapshot.id,
-      title: "A Sunday on La Grande Jatte — 1884",
-      description:
-        "Georges Seurat's iconic pointillist painting from the Art Institute of Chicago.",
+      title: lot1Artwork?.title ?? "A Sunday on La Grande Jatte — 1884",
+      description: lot1Artwork?.description ?? "Georges Seurat's iconic pointillist painting.",
       category: "ART_INSTITUTE_CHICAGO",
       lotCategory: "FINE_ART",
       startingBidCents: 100000n,
@@ -171,7 +249,7 @@ async function main() {
       originalEndsAt: endsAt,
       status: "LIVE",
     },
-    update: { status: "LIVE", endsAt, startsAt, lotCategory: "FINE_ART" },
+    update: { status: "LIVE", endsAt, startsAt, lotCategory: "FINE_ART", snapshotId: snapshot.id },
   });
 
   // Seed bids if none exist yet
@@ -228,129 +306,46 @@ async function main() {
     });
   }
 
-  // ── Extra lots ────────────────────────────────────────────────────────────
-  const extraLots: {
-    id: string;
-    externalId: string;
-    title: string;
-    description: string;
-    artist: string;
-    date: string;
-    imageUrl: string;
-    lotCategory: "FINE_ART" | "JEWELRY" | "WATCHES" | "ANTIQUITIES" | "NUMISMATICS" | "FASHION" | "VEHICLES" | "BOOKS" | "WINE" | "OTHER";
-    startingBidCents: bigint;
-    status: "SCHEDULED" | "LIVE" | "CLOSED";
-    offsetMs: number; // offset from now for startsAt / endsAt
-  }[] = [
-    {
-      id: "seed-lot-2",
-      externalId: "28560",
-      title: "A Grande Onda de Kanagawa",
-      description: "Famosa gravura em madeira de Hokusai, circa 1831, representando a força das ondas do oceano.",
-      artist: "Katsushika Hokusai",
-      date: "ca. 1831",
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/a/a5/Tsunami_by_hokusai_19th_century.jpg/1280px-Tsunami_by_hokusai_19th_century.jpg",
-      lotCategory: "FINE_ART",
-      startingBidCents: 50000n,
-      status: "SCHEDULED",
-      offsetMs: 2 * 3_600_000, // starts in 2h
-    },
-    {
-      id: "seed-lot-3",
-      externalId: "14966",
-      title: "Noite Estrelada",
-      description: "Obra-prima de Vincent van Gogh pintada em junho de 1889 durante sua estadia no asilo em Saint-Rémy-de-Provence.",
-      artist: "Vincent van Gogh",
-      date: "1889",
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/e/ea/Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg/1280px-Van_Gogh_-_Starry_Night_-_Google_Art_Project.jpg",
-      lotCategory: "FINE_ART",
-      startingBidCents: 200000n,
-      status: "SCHEDULED",
-      offsetMs: 5 * 3_600_000, // starts in 5h
-    },
-    {
-      id: "seed-lot-4",
-      externalId: "66039",
-      title: "Moça com Brinco de Pérola",
-      description: "Obra de Johannes Vermeer, circa 1665. Considerada a 'Mona Lisa do Norte', retrata uma jovem com um exótico brinco de pérola.",
-      artist: "Johannes Vermeer",
-      date: "ca. 1665",
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/ce/Girl_with_a_Pearl_Earring.jpg/1280px-Girl_with_a_Pearl_Earring.jpg",
-      lotCategory: "FINE_ART",
-      startingBidCents: 150000n,
-      status: "SCHEDULED",
-      offsetMs: 24 * 3_600_000, // starts in 24h
-    },
-    {
-      id: "seed-lot-5",
-      externalId: "87479",
-      title: "O Grito",
-      description: "Ícone expressionista de Edvard Munch, 1893. Uma das imagens mais reconhecíveis da história da arte ocidental.",
-      artist: "Edvard Munch",
-      date: "1893",
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f4/The_Scream.jpg/1280px-The_Scream.jpg",
-      lotCategory: "FINE_ART",
-      startingBidCents: 180000n,
-      status: "CLOSED",
-      offsetMs: -3 * 3_600_000, // ended 3h ago
-    },
-    {
-      id: "seed-lot-6",
-      externalId: "11279",
-      title: "American Gothic",
-      description: "Pintura icônica de Grant Wood, 1930, retratando um fazendeiro americano e uma mulher diante de uma casa de estilo gótico.",
-      artist: "Grant Wood",
-      date: "1930",
-      imageUrl: "https://upload.wikimedia.org/wikipedia/commons/thumb/c/cc/Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg/1280px-Grant_Wood_-_American_Gothic_-_Google_Art_Project.jpg",
-      lotCategory: "FINE_ART",
-      startingBidCents: 80000n,
-      status: "CLOSED",
-      offsetMs: -6 * 3_600_000, // ended 6h ago
-    },
-  ];
+  // ── Remaining lots from AIC API data ────────────────────────────────────
+  for (const cfg of LOT_CONFIGS.filter((c) => c.id !== "seed-lot-1")) {
+    const snapRef = snapshotByLotId.get(cfg.id);
+    if (!snapRef) continue;
 
-  for (const extra of extraLots) {
-    const snap = await prisma.catalogItemSnapshot.upsert({
-      where: { provider_externalId: { provider: "ART_INSTITUTE_CHICAGO", externalId: extra.externalId } },
-      create: {
-        provider: "ART_INSTITUTE_CHICAGO",
-        externalId: extra.externalId,
-        title: extra.title,
-        attributes: { artist: extra.artist, date: extra.date },
-        sourceImageUrl: extra.imageUrl,
-      },
-      update: { sourceImageUrl: extra.imageUrl },
-    });
-
-    const lotStartsAt = new Date(now.getTime() + (extra.status === "CLOSED" ? extra.offsetMs - 3_600_000 : extra.offsetMs));
-    const lotEndsAt = new Date(now.getTime() + (extra.status === "CLOSED" ? extra.offsetMs : extra.offsetMs + 4 * 3_600_000));
+    const artwork = artworksById.get(cfg.artworkId);
+    const lotStartsAt = cfg.status === "CLOSED"
+      ? new Date(now.getTime() + cfg.offsetMs - 3_600_000)
+      : new Date(now.getTime() + cfg.offsetMs);
+    const lotEndsAt = cfg.status === "CLOSED"
+      ? new Date(now.getTime() + cfg.offsetMs)
+      : new Date(now.getTime() + cfg.offsetMs + 4 * 3_600_000);
 
     await prisma.lot.upsert({
-      where: { id: extra.id },
+      where: { id: cfg.id },
       create: {
-        id: extra.id,
+        id: cfg.id,
         auctioneerId: auctioneer.id,
-        snapshotId: snap.id,
-        title: extra.title,
-        description: extra.description,
+        snapshotId: snapRef.id,
+        title: artwork?.title ?? snapRef.title,
+        description: artwork?.description ?? null,
         category: "ART_INSTITUTE_CHICAGO",
-        lotCategory: extra.lotCategory,
-        startingBidCents: extra.startingBidCents,
+        lotCategory: cfg.lotCategory,
+        startingBidCents: cfg.startingBidCents,
         minIncrementCents: 5000n,
         startsAt: lotStartsAt,
         endsAt: lotEndsAt,
         originalEndsAt: lotEndsAt,
-        status: extra.status,
-        ...(extra.status === "CLOSED" ? { closedAt: lotEndsAt } : {}),
+        status: cfg.status,
+        ...(cfg.status === "CLOSED" ? { closedAt: lotEndsAt } : {}),
       },
       update: {
-        status: extra.status,
-        lotCategory: extra.lotCategory,
-        snapshotId: snap.id,
+        status: cfg.status,
+        lotCategory: cfg.lotCategory,
+        snapshotId: snapRef.id,
+        title: artwork?.title ?? snapRef.title,
       },
     });
   }
-  // ── End extra lots ─────────────────────────────────────────────────────────
+  // ── End lots ──────────────────────────────────────────────────────────────
 
   console.log("Seeding complete!");
   console.log("  Auctioneer: auctioneer@demo.com / Password123!");

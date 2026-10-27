@@ -29,7 +29,9 @@ const createLotSchema = z.object({
   providerId: z.string().optional(),
   title: z.string().min(1),
   description: z.string().optional(),
+  additionalImages: z.array(z.string().url()).max(10).default([]),
   category: z.enum(["ART_INSTITUTE_CHICAGO", "SCRYFALL", "OPEN_LIBRARY"]),
+  lotCategory: z.enum(["FINE_ART", "JEWELRY", "WATCHES", "ANTIQUITIES", "NUMISMATICS", "FASHION", "VEHICLES", "BOOKS", "WINE", "OTHER"]).optional(),
   startingBidCents: z.number().int().positive(),
   minIncrementCents: z.number().int().positive(),
   startsAt: z.string().datetime(),
@@ -52,6 +54,7 @@ function serializeLotWithSnapshot(lot: LotWithSnapshot) {
     minIncrementCents: lot.minIncrementCents.toString(),
     currentBidCents: lot.currentBidCents?.toString() ?? null,
     imageUrl: lot.snapshot?.sourceImageUrl ?? null,
+    additionalImages: lot.additionalImages ?? [],
     snapshot: undefined,
   };
 }
@@ -88,7 +91,9 @@ export class LotsController {
       snapshotId,
       title: d.title,
       description: d.description,
+      additionalImages: d.additionalImages,
       category: d.category,
+      lotCategory: d.lotCategory,
       startingBidCents: BigInt(d.startingBidCents),
       minIncrementCents: BigInt(d.minIncrementCents),
       startsAt: new Date(d.startsAt),

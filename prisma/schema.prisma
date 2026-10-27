@@ -173,6 +173,7 @@ model Lot {
   snapshotId         String
   title              String
   description        String?
+  additionalImages   String[]
   category           CatalogProvider
   lotCategory        LotCategory     @default(OTHER)
   startingBidCents   BigInt
