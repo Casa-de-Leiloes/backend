@@ -7,6 +7,7 @@ import { BidsModule } from "./bids/bids.module";
 import { CatalogModule } from "./catalog/catalog.module";
 import { validateEnv } from "./config/env.schema";
 import { HealthModule } from "./health/health.module";
+import { ImgProxyModule } from "./img-proxy/img-proxy.module";
 import { LotsModule } from "./lots/lots.module";
 import { PrismaModule } from "./prisma/prisma.module";
 import { RedisModule } from "./redis/redis.module";
@@ -33,6 +34,7 @@ import { WalletModule } from "./wallet/wallet.module";
     BidsModule,
     UsersModule,
     HealthModule,
+    ImgProxyModule,
   ],
 })
 export class AppModule {}
