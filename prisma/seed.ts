@@ -116,7 +116,6 @@ async function main() {
 
   // ── AIC API helpers ───────────────────────────────────────────────────────
   const AIC_BASE_URL = "https://api.artic.edu/api/v1";
-  const AIC_IIIF_BASE = "https://www.artic.edu/iiif/2";
   const AIC_FIELDS = "id,title,description,image_id,artist_display,date_display,medium_display";
 
   interface AicArtwork {
@@ -142,8 +141,34 @@ async function main() {
     return new Map(json.data.map((a) => [a.id, a]));
   }
 
-  function aicImageUrl(imageId: string): string {
-    return `${AIC_IIIF_BASE}/${imageId}/full/843,/0/default.jpg`;
+  // Wikimedia Commons API: search for artwork image (accessible from Node.js backend)
+  async function fetchWikimediaImage(query: string): Promise<string | null> {
+    try {
+      const headers = { "User-Agent": "AuctionHouse/1.0 (seed; auction@demo.com)" };
+      // Search Commons for the file
+      const searchUrl = `https://commons.wikimedia.org/w/api.php?action=query&list=search&srsearch=${encodeURIComponent(query)}&srnamespace=6&srlimit=1&format=json`;
+      const sr = await fetch(searchUrl, { headers });
+      if (!sr.ok) return null;
+      const srJson = (await sr.json()) as { query: { search: Array<{ title: string }> } };
+      const fileTitle = srJson.query.search[0]?.title;
+      if (!fileTitle) return null;
+      // Get thumbnail URL for the file
+      const infoUrl = `https://commons.wikimedia.org/w/api.php?action=query&titles=${encodeURIComponent(fileTitle)}&prop=imageinfo&iiprop=url&iiurlwidth=1024&format=json`;
+      const ir = await fetch(infoUrl, { headers });
+      if (!ir.ok) return null;
+      const irJson = (await ir.json()) as {
+        query: { pages: Record<string, { imageinfo?: Array<{ thumburl: string }> }> };
+      };
+      const pages = Object.values(irJson.query.pages);
+      const thumbUrl = pages[0]?.imageinfo?.[0]?.thumburl ?? null;
+      if (!thumbUrl) return null;
+      // Normalize: thumb.wikimedia.org → upload.wikimedia.org, strip query params
+      return thumbUrl
+        .replace(/^https?:\/\/thumb\.wikimedia\.org/, "https://upload.wikimedia.org")
+        .split("?")[0];
+    } catch {
+      return null;
+    }
   }
   // ─────────────────────────────────────────────────────────────────────────
 
@@ -172,7 +197,8 @@ async function main() {
   const artworksById = await fetchAicByIds(allIds);
   console.log(`  Received ${artworksById.size} artworks.`);
 
-  // Upsert snapshots from live API data
+  // Upsert snapshots — metadata from AIC, images from Wikipedia API
+  console.log("  Fetching artwork images from Wikipedia API...");
   const snapshotByLotId = new Map<string, { id: string; title: string }>();
   for (const cfg of LOT_CONFIGS) {
     const artwork = artworksById.get(cfg.artworkId);
@@ -180,7 +206,10 @@ async function main() {
       console.warn(`  Artwork ${cfg.artworkId} not found, skipping ${cfg.id}`);
       continue;
     }
-    const sourceImageUrl = artwork.image_id ? aicImageUrl(artwork.image_id) : null;
+    // Wikimedia Commons API — proxiable image URL for our backend proxy to serve
+    const searchQuery = `${artwork.title} ${artwork.artist_display?.split(",")[0] ?? ""}`.trim();
+    const sourceImageUrl = await fetchWikimediaImage(searchQuery);
+    console.log(`    ${artwork.title.slice(0, 40)}: ${sourceImageUrl ? "✓" : "✗"}`);
     const snap = await prisma.catalogItemSnapshot.upsert({
       where: { provider_externalId: { provider: "ART_INSTITUTE_CHICAGO", externalId: String(artwork.id) } },
       create: {
@@ -192,9 +221,12 @@ async function main() {
           date: artwork.date_display ?? null,
           medium: artwork.medium_display ?? null,
         },
-        sourceImageUrl,
+        ...(sourceImageUrl ? { sourceImageUrl } : {}),
       },
-      update: { sourceImageUrl, title: artwork.title },
+      update: {
+        title: artwork.title,
+        ...(sourceImageUrl ? { sourceImageUrl } : {}),
+      },
     });
     snapshotByLotId.set(cfg.id, { id: snap.id, title: artwork.title });
   }

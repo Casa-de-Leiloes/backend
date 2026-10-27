@@ -158,7 +158,7 @@ model CatalogItemSnapshot {
   externalId     String
   title          String
   attributes     Json
-  sourceImageUrl String
+  sourceImageUrl String?
   storedImageKey String?
   fetchedAt      DateTime        @default(now())
 

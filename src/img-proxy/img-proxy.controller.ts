@@ -11,6 +11,8 @@ const ALLOWED_HOSTS = new Set([
   "www.artic.edu",
   "artic.edu",
   "iiif.artic.edu",
+  "upload.wikimedia.org",
+  "thumb.wikimedia.org",
   "cards.scryfall.io",
   "c1.scryfall.com",
   "covers.openlibrary.org",
