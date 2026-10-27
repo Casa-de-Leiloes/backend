@@ -2,9 +2,11 @@ import {
   BadRequestException,
   Controller,
   Get,
+  Headers,
   Query,
   Res,
 } from "@nestjs/common";
+import { createHash } from "node:crypto";
 import type { Response } from "express";
 
 const ALLOWED_HOSTS = new Set([
@@ -20,7 +22,11 @@ const ALLOWED_HOSTS = new Set([
 @Controller("img-proxy")
 export class ImgProxyController {
   @Get()
-  async proxy(@Query("url") rawUrl: string, @Res() res: Response) {
+  async proxy(
+    @Query("url") rawUrl: string,
+    @Res() res: Response,
+    @Headers("if-none-match") ifNoneMatch?: string,
+  ) {
     if (!rawUrl) throw new BadRequestException("url query param required");
 
     let parsed: URL;
@@ -32,6 +38,13 @@ export class ImgProxyController {
 
     if (!ALLOWED_HOSTS.has(parsed.hostname)) {
       throw new BadRequestException("domain not allowed");
+    }
+
+    // ETag derived from URL — stable for same image URL
+    const etag = `"${createHash("sha1").update(rawUrl).digest("hex").slice(0, 16)}"`;
+    if (ifNoneMatch === etag) {
+      res.status(304).end();
+      return;
     }
 
     const response = await fetch(rawUrl, {
@@ -58,7 +71,8 @@ export class ImgProxyController {
 
     const contentType = response.headers.get("content-type") ?? "image/jpeg";
     res.setHeader("Content-Type", contentType);
-    res.setHeader("Cache-Control", "public, max-age=86400");
+    res.setHeader("Cache-Control", "public, max-age=31536000, immutable");
+    res.setHeader("ETag", etag);
 
     const buf = await response.arrayBuffer();
     res.end(Buffer.from(buf));
