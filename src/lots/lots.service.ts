@@ -55,6 +55,13 @@ export class LotsService {
     return this.prisma.lot.findUniqueOrThrow({ where: { id } });
   }
 
+  async findByIdWithSnapshot(id: string): Promise<LotWithSnapshot> {
+    return this.prisma.lot.findUniqueOrThrow({
+      where: { id },
+      include: { snapshot: true },
+    });
+  }
+
   async cancel(lotId: string, requesterId: string): Promise<Lot> {
     return this.prisma.$transaction(async (tx) => {
       const lot = await tx.lot.findUniqueOrThrow({ where: { id: lotId } });

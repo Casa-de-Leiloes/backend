@@ -142,8 +142,8 @@ export class LotsController {
   @Get(":id")
   async findOne(@Param("id") id: string) {
     try {
-      const lot = await this.lotsService.findById(id);
-      return serializeLot(lot);
+      const lot = await this.lotsService.findByIdWithSnapshot(id);
+      return serializeLotWithSnapshot(lot);
     } catch {
       throw new NotFoundException(`Lot ${id} not found`);
     }
