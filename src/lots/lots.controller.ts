@@ -100,6 +100,8 @@ export class LotsController {
   @Get()
   async list(
     @Query("status") status?: string,
+    @Query("lotCategory") lotCategory?: string,
+    @Query("endsToday") endsToday?: string,
     @Query("limit", new DefaultValuePipe(20), ParseIntPipe) limit = 20,
     @Query("cursor") cursor?: string,
   ) {
@@ -111,6 +113,8 @@ export class LotsController {
 
     const page = await this.lotsService.list({
       status: lotStatus,
+      lotCategory,
+      endsToday: endsToday === "true",
       limit: Math.min(limit, 100),
       cursor,
     });

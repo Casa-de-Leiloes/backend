@@ -26,6 +26,19 @@ enum LedgerEntryKind {
   SETTLEMENT_CREDIT
 }
 
+enum LotCategory {
+  FINE_ART
+  JEWELRY
+  WATCHES
+  ANTIQUITIES
+  NUMISMATICS
+  FASHION
+  VEHICLES
+  BOOKS
+  WINE
+  OTHER
+}
+
 enum CatalogProvider {
   ART_INSTITUTE_CHICAGO
   SCRYFALL
@@ -161,6 +174,7 @@ model Lot {
   title              String
   description        String?
   category           CatalogProvider
+  lotCategory        LotCategory     @default(OTHER)
   startingBidCents   BigInt
   minIncrementCents  BigInt
   startsAt           DateTime
@@ -186,6 +200,7 @@ model Lot {
   @@index([status, startsAt])
   @@index([auctioneerId, status])
   @@index([category, status])
+  @@index([lotCategory, status])
 }
 
 model Bid {

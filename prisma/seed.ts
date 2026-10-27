@@ -163,6 +163,7 @@ async function main() {
       description:
         "Georges Seurat's iconic pointillist painting from the Art Institute of Chicago.",
       category: "ART_INSTITUTE_CHICAGO",
+      lotCategory: "FINE_ART",
       startingBidCents: 100000n,
       minIncrementCents: 5000n,
       startsAt,
@@ -170,7 +171,7 @@ async function main() {
       originalEndsAt: endsAt,
       status: "LIVE",
     },
-    update: { status: "LIVE", endsAt, startsAt },
+    update: { status: "LIVE", endsAt, startsAt, lotCategory: "FINE_ART" },
   });
 
   // Seed bids if none exist yet

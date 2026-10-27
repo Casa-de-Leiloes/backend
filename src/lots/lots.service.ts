@@ -157,9 +157,34 @@ export class LotsService {
     };
   }
 
-  async list(opts: { status?: LotStatus; cursor?: string; limit: number }): Promise<LotPage> {
+  async list(opts: {
+    status?: LotStatus;
+    lotCategory?: string;
+    endsToday?: boolean;
+    cursor?: string;
+    limit: number;
+  }): Promise<LotPage> {
+    const todayStart = new Date();
+    todayStart.setHours(0, 0, 0, 0);
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+
+    const validCategories = [
+      "FINE_ART","JEWELRY","WATCHES","ANTIQUITIES","NUMISMATICS","FASHION","VEHICLES","BOOKS","WINE","OTHER",
+    ];
+    const safeCategory =
+      opts.lotCategory && validCategories.includes(opts.lotCategory)
+        ? (opts.lotCategory as import("@prisma/client").LotCategory)
+        : undefined;
+
+    const where = {
+      ...(opts.status ? { status: opts.status } : {}),
+      ...(safeCategory ? { lotCategory: safeCategory } : {}),
+      ...(opts.endsToday ? { endsAt: { gte: todayStart, lte: todayEnd } } : {}),
+    };
+
     const items = await this.prisma.lot.findMany({
-      where: opts.status ? { status: opts.status } : undefined,
+      where: Object.keys(where).length ? where : undefined,
       orderBy: { endsAt: "asc" },
       take: opts.limit + 1,
       ...(opts.cursor ? { skip: 1, cursor: { id: opts.cursor } } : {}),
