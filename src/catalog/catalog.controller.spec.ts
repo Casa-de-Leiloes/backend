@@ -22,14 +22,7 @@ describe("CatalogController", () => {
   describe("search", () => {
     it("returns search results for valid provider", async () => {
       mockCatalogService.search.mockResolvedValue([
-        {
-          providerId: "123",
-          title: "Water Lilies",
-          description: "Monet",
-          imageUrl: null,
-          externalUrl: null,
-          metadata: {},
-        },
+        { providerId: "123", title: "Water Lilies", description: "Monet", imageUrl: null, externalUrl: null, metadata: {} },
       ]);
       const result = await ctrl.search("monet", "ART_INSTITUTE_CHICAGO");
       expect(result.items).toHaveLength(1);
@@ -42,9 +35,7 @@ describe("CatalogController", () => {
     });
 
     it("throws BadRequest when query is whitespace only", async () => {
-      await expect(ctrl.search("   ", "ART_INSTITUTE_CHICAGO")).rejects.toThrow(
-        BadRequestException,
-      );
+      await expect(ctrl.search("   ", "ART_INSTITUTE_CHICAGO")).rejects.toThrow(BadRequestException);
     });
 
     it("throws BadRequest for invalid provider", async () => {

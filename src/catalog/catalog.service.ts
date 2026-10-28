@@ -1,11 +1,11 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { CatalogProvider as CatalogProviderEnum } from "@prisma/client";
-import type { Redis } from "ioredis";
-import type { PrismaService } from "../prisma/prisma.service";
+import { Redis } from "ioredis";
+import { PrismaService } from "../prisma/prisma.service";
 import { REDIS_CLIENT } from "../redis/redis.constants";
-import type { AicAdapter } from "./adapters/aic.adapter";
-import type { OpenLibraryAdapter } from "./adapters/open-library.adapter";
-import type { ScryfallAdapter } from "./adapters/scryfall.adapter";
+import { AicAdapter } from "./adapters/aic.adapter";
+import { OpenLibraryAdapter } from "./adapters/open-library.adapter";
+import { ScryfallAdapter } from "./adapters/scryfall.adapter";
 import type { CatalogItem } from "./catalog.types";
 
 const CACHE_TTL_SECONDS = 3600;

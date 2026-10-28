@@ -270,13 +270,7 @@ describe("BidsService — read methods", () => {
   describe("getMyWins", () => {
     it("returns won auctions with receipt tokens", async () => {
       mockPrisma.receipt.findMany.mockResolvedValue([
-        {
-          lotId: "lot-1",
-          amountCents: 5000n,
-          publicToken: "tok-abc",
-          winnerId: "user-1",
-          issuedAt: new Date(),
-        },
+        { lotId: "lot-1", amountCents: 5000n, publicToken: "tok-abc", winnerId: "user-1", issuedAt: new Date() },
       ]);
       const wins = await svc.getMyWins("user-1");
       expect(wins).toHaveLength(1);

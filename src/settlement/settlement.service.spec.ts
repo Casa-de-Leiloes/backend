@@ -48,7 +48,10 @@ describe("SettlementService", () => {
       async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
     );
     const module = await Test.createTestingModule({
-      providers: [SettlementService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        SettlementService,
+        { provide: PrismaService, useValue: mockPrisma },
+      ],
     }).compile();
     svc = module.get(SettlementService);
   });
