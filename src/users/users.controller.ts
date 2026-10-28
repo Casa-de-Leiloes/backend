@@ -23,6 +23,27 @@ export class UsersController {
     private readonly prisma: PrismaService,
   ) {}
 
+  @Get()
+  async me(@Req() req: Request) {
+    const user = req.user as BetterAuthUser;
+    const dbUser = await this.prisma.user.findUniqueOrThrow({ where: { id: user.id } });
+    let maskedEmail: string | null = null;
+    try {
+      if (dbUser.encryptedEmail) {
+        const plain = this.identityService.decrypt(dbUser.encryptedEmail);
+        const atIdx = plain.indexOf("@");
+        const local = atIdx > 0 ? plain.slice(0, atIdx) : plain;
+        const domain = atIdx > 0 ? plain.slice(atIdx + 1) : "";
+        const visible = local.slice(0, Math.min(4, local.length));
+        const stars = "*".repeat(Math.max(0, local.length - visible.length));
+        maskedEmail = domain ? `${visible}${stars}@${domain}` : `${visible}${stars}`;
+      }
+    } catch {
+      // key rotation edge case
+    }
+    return { id: dbUser.id, name: user.name, maskedEmail, role: dbUser.role };
+  }
+
   @Get("bids")
   async myBids(
     @Req() req: Request,
