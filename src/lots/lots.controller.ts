@@ -68,7 +68,10 @@ function serializeLotWithSnapshot(lot: LotWithSnapshot) {
     currentBidCents: lot.currentBidCents?.toString() ?? null,
     imageUrl: lot.snapshot?.sourceImageUrl ?? null,
     additionalImages: lot.additionalImages ?? [],
-    attributes: (lot.snapshot?.attributes ?? {}) as Record<string, string | number | boolean | null>,
+    attributes: (lot.snapshot?.attributes ?? {}) as Record<
+      string,
+      string | number | boolean | null
+    >,
     catalogExternalId: lot.snapshot?.externalId ?? null,
     catalogProvider: lot.snapshot?.provider ?? null,
     snapshot: undefined,

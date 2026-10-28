@@ -152,17 +152,29 @@ describe("LotsService", () => {
     });
 
     it("throws Forbidden when lot is already CLOSED", async () => {
-      mockTx.lot.findUniqueOrThrow.mockResolvedValue({ ...mockLot, status: "CLOSED", auctioneerId: "user-1" });
+      mockTx.lot.findUniqueOrThrow.mockResolvedValue({
+        ...mockLot,
+        status: "CLOSED",
+        auctioneerId: "user-1",
+      });
       await expect(svc.cancel("lot-1", "user-1")).rejects.toThrow("LOT_ALREADY_CLOSED");
     });
 
     it("throws Forbidden when lot is already CANCELLED", async () => {
-      mockTx.lot.findUniqueOrThrow.mockResolvedValue({ ...mockLot, status: "CANCELLED", auctioneerId: "user-1" });
+      mockTx.lot.findUniqueOrThrow.mockResolvedValue({
+        ...mockLot,
+        status: "CANCELLED",
+        auctioneerId: "user-1",
+      });
       await expect(svc.cancel("lot-1", "user-1")).rejects.toThrow("LOT_ALREADY_CANCELLED");
     });
 
     it("cancels lot and refunds bidders", async () => {
-      mockTx.lot.findUniqueOrThrow.mockResolvedValue({ ...mockLot, status: "LIVE", auctioneerId: "user-1" });
+      mockTx.lot.findUniqueOrThrow.mockResolvedValue({
+        ...mockLot,
+        status: "LIVE",
+        auctioneerId: "user-1",
+      });
       mockTx.bid.groupBy.mockResolvedValue([
         { bidderId: "bidder-1", _max: { amountCents: 5000n } },
       ]);
@@ -179,7 +191,11 @@ describe("LotsService", () => {
     });
 
     it("skips refund when bidder wallet not found", async () => {
-      mockTx.lot.findUniqueOrThrow.mockResolvedValue({ ...mockLot, status: "LIVE", auctioneerId: "user-1" });
+      mockTx.lot.findUniqueOrThrow.mockResolvedValue({
+        ...mockLot,
+        status: "LIVE",
+        auctioneerId: "user-1",
+      });
       mockTx.bid.groupBy.mockResolvedValue([
         { bidderId: "bidder-ghost", _max: { amountCents: 5000n } },
       ]);

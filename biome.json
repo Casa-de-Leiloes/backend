@@ -23,7 +23,8 @@
       },
       "style": {
         "useConst": "error",
-        "noParameterAssign": "error"
+        "noParameterAssign": "error",
+        "useImportType": "off"
       },
       "correctness": {
         "noUnusedVariables": "error",
