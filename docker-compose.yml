@@ -51,17 +51,6 @@ services:
       redis:
         condition: service_healthy
 
-  web:
-    build:
-      context: ../frontend
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    ports:
-      - "80:80"
-    environment:
-      API_URL: ${API_URL:-http://api:3000}
-    depends_on:
-      - api
 
 volumes:
   postgres_data:
