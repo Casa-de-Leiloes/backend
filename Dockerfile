@@ -7,6 +7,7 @@ RUN bun install --frozen-lockfile
 COPY . .
 RUN bunx prisma generate
 RUN bun run build
+RUN bun build prisma/seed.ts --outfile dist/seed.js --target node --external @prisma/client
 
 FROM node:22-slim AS runner
 
@@ -23,4 +24,4 @@ COPY --from=builder /app/package.json ./
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node node_modules/.bin/prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "node node_modules/.bin/prisma migrate deploy && node dist/seed.js && node dist/main.js"]
