@@ -1,4 +1,5 @@
 import { Test } from "@nestjs/testing";
+import { LotSchedulerService } from "../lots/lot-scheduler.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { BidsService } from "./bids.service";
 
@@ -34,10 +35,23 @@ const mockTx = {
   walletLedgerEntry: {
     create: jest.fn(),
   },
+  lotExtension: {
+    create: jest.fn(),
+  },
 };
 
 const mockPrisma = {
   $transaction: jest.fn(),
+  bid: {
+    findMany: jest.fn(),
+  },
+  receipt: {
+    findMany: jest.fn(),
+  },
+};
+
+const mockLotScheduler = {
+  rescheduleClose: jest.fn(),
 };
 
 describe("BidsService", () => {
@@ -49,7 +63,11 @@ describe("BidsService", () => {
       async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
     );
     const module = await Test.createTestingModule({
-      providers: [BidsService, { provide: PrismaService, useValue: mockPrisma }],
+      providers: [
+        BidsService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: LotSchedulerService, useValue: mockLotScheduler },
+      ],
     }).compile();
     svc = module.get(BidsService);
   });
@@ -91,6 +109,18 @@ describe("BidsService", () => {
     ).rejects.toThrow("ALREADY_LEADING");
   });
 
+  it("rejects bid with insufficient wallet balance", async () => {
+    mockTx.lot.findUnique.mockResolvedValue(makeLot());
+    mockTx.wallet.findUniqueOrThrow.mockResolvedValue({
+      id: "w-1",
+      totalCents: 500n,
+      committedCents: 0n,
+    });
+    await expect(
+      svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1000n }),
+    ).rejects.toThrow("INSUFFICIENT_BALANCE");
+  });
+
   it("accepts first valid bid, commits wallet, and updates lot", async () => {
     const lot = makeLot();
     mockTx.lot.findUnique.mockResolvedValue(lot);
@@ -113,6 +143,7 @@ describe("BidsService", () => {
       placedAt: new Date(),
     });
     mockTx.lot.update.mockResolvedValue({ ...lot, currentBidCents: 1000n });
+    mockTx.lotExtension.create.mockResolvedValue({});
 
     const bid = await svc.placeBid({
       lotId: "lot-1",
@@ -130,5 +161,120 @@ describe("BidsService", () => {
     expect(mockTx.lot.update).toHaveBeenCalledWith(
       expect.objectContaining({ data: expect.objectContaining({ currentBidCents: 1000n }) }),
     );
+  });
+
+  it("releases previous leader's committed funds on new bid", async () => {
+    const lot = makeLot({ currentBidCents: 1000n, leadingBidderId: "prev-leader" });
+    mockTx.lot.findUnique.mockResolvedValue(lot);
+    mockTx.wallet.findUniqueOrThrow
+      .mockResolvedValueOnce({ id: "w-1", totalCents: 50000n, committedCents: 0n })
+      .mockResolvedValueOnce({ id: "w-prev", totalCents: 0n, committedCents: 1000n });
+    mockTx.wallet.update.mockResolvedValue({});
+    mockTx.walletLedgerEntry.create.mockResolvedValue({});
+    mockTx.bid.create.mockResolvedValue({
+      id: "bid-2",
+      lotId: "lot-1",
+      hash: "def",
+      sequence: 2,
+      previousHash: "abc",
+      signature: "sig2",
+      amountCents: 1100n,
+      bidderId: "user-1",
+      placedAt: new Date(),
+    });
+    mockTx.lot.update.mockResolvedValue({ ...lot, currentBidCents: 1100n });
+    mockTx.lotExtension.create.mockResolvedValue({});
+
+    await svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1100n });
+    // Two wallet.findUniqueOrThrow: prev leader + new bidder
+    expect(mockTx.wallet.findUniqueOrThrow).toHaveBeenCalledTimes(2);
+  });
+});
+
+describe("BidsService — read methods", () => {
+  let svc: BidsService;
+
+  beforeEach(async () => {
+    jest.clearAllMocks();
+    mockPrisma.$transaction.mockImplementation(
+      async (fn: (tx: typeof mockTx) => Promise<unknown>) => fn(mockTx),
+    );
+    const module = await Test.createTestingModule({
+      providers: [
+        BidsService,
+        { provide: PrismaService, useValue: mockPrisma },
+        { provide: LotSchedulerService, useValue: mockLotScheduler },
+      ],
+    }).compile();
+    svc = module.get(BidsService);
+  });
+
+  describe("getBidsForLot", () => {
+    it("returns bids ordered by sequence", async () => {
+      const bids = [
+        { id: "b1", sequence: 1, bidderId: "user-1", amountCents: 1000n },
+        { id: "b2", sequence: 2, bidderId: "user-2", amountCents: 1100n },
+      ];
+      mockPrisma.bid.findMany.mockResolvedValue(bids);
+      const result = await svc.getBidsForLot("lot-1");
+      expect(result).toHaveLength(2);
+      expect(result[0].sequence).toBe(1);
+    });
+  });
+
+  describe("getPseudonym", () => {
+    it("returns deterministic pseudonym string", () => {
+      const p1 = svc.getPseudonym("user-abc");
+      const p2 = svc.getPseudonym("user-abc");
+      expect(p1).toBe(p2);
+      expect(typeof p1).toBe("string");
+      expect(p1.length).toBeGreaterThan(0);
+    });
+
+    it("returns different pseudonyms for different bidder ids", () => {
+      const p1 = svc.getPseudonym("user-1");
+      const p2 = svc.getPseudonym("user-2");
+      expect(p1).not.toBe(p2);
+    });
+  });
+
+  describe("getMyBids", () => {
+    it("returns paginated bids", async () => {
+      const bids = Array.from({ length: 6 }, (_, i) => ({
+        id: `bid-${i}`,
+        bidderId: "user-1",
+        sequence: i + 1,
+        amountCents: 1000n,
+        placedAt: new Date(),
+      }));
+      mockPrisma.bid.findMany.mockResolvedValue(bids);
+      const result = await svc.getMyBids("user-1", undefined, 5);
+      expect(result.items).toHaveLength(5);
+      expect(result.nextCursor).toBe("bid-4");
+    });
+
+    it("returns no cursor when fewer items than limit", async () => {
+      mockPrisma.bid.findMany.mockResolvedValue([{ id: "bid-1", bidderId: "user-1" }]);
+      const result = await svc.getMyBids("user-1");
+      expect(result.nextCursor).toBeNull();
+    });
+  });
+
+  describe("getMyWins", () => {
+    it("returns won auctions with receipt tokens", async () => {
+      mockPrisma.receipt.findMany.mockResolvedValue([
+        { lotId: "lot-1", amountCents: 5000n, publicToken: "tok-abc", winnerId: "user-1", issuedAt: new Date() },
+      ]);
+      const wins = await svc.getMyWins("user-1");
+      expect(wins).toHaveLength(1);
+      expect(wins[0].receiptToken).toBe("tok-abc");
+      expect(wins[0].amountCents).toBe(5000n);
+    });
+
+    it("returns empty array when no wins", async () => {
+      mockPrisma.receipt.findMany.mockResolvedValue([]);
+      const wins = await svc.getMyWins("user-1");
+      expect(wins).toHaveLength(0);
+    });
   });
 });
