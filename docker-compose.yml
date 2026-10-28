@@ -1,31 +1,27 @@
-version: "3.9"
-
 services:
   postgres:
     image: postgres:16-alpine
+    restart: unless-stopped
     environment:
       POSTGRES_USER: auction
       POSTGRES_PASSWORD: auction
-      POSTGRES_DB: auction_house_dev
-    ports:
-      - "5432:5432"
+      POSTGRES_DB: auction_house
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auction"]
-      interval: 5s
+      test: ["CMD-SHELL", "pg_isready -U auction -d auction_house"]
+      interval: 10s
       timeout: 5s
       retries: 5
 
   redis:
     image: redis:7-alpine
-    ports:
-      - "6379:6379"
+    restart: unless-stopped
     volumes:
       - redis_data:/data
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
+      interval: 10s
       timeout: 5s
       retries: 5
 
@@ -33,30 +29,39 @@ services:
     build:
       context: .
       dockerfile: Dockerfile
-    ports:
-      - "3000:3000"
+    restart: unless-stopped
     env_file:
       - path: .env
         required: false
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://auction:auction@postgres:5432/auction_house_dev
+      DATABASE_URL: postgresql://auction:auction@postgres:5432/auction_house
       REDIS_URL: redis://redis:6379
       FERNET_KEYS: ${FERNET_KEYS}
       EMAIL_LOOKUP_KEY: ${EMAIL_LOOKUP_KEY}
       PSEUDONYM_KEY: ${PSEUDONYM_KEY}
       AUDIT_SIGNING_KEY: ${AUDIT_SIGNING_KEY}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost:3000}
-      PASSKEY_RP_ID: ${PASSKEY_RP_ID:-localhost}
-      PASSKEY_ORIGIN: ${PASSKEY_ORIGIN:-http://localhost:5173}
-      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost:5173}
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost}
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+
+  web:
+    build:
+      context: ../frontend
+      dockerfile: Dockerfile
+    restart: unless-stopped
+    ports:
+      - "80:80"
+    environment:
+      API_URL: ${API_URL:-http://api:3000}
+    depends_on:
+      - api
 
 volumes:
   postgres_data:
