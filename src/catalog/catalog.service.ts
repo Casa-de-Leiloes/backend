@@ -1,6 +1,6 @@
 import { Inject, Injectable } from "@nestjs/common";
 import { CatalogProvider as CatalogProviderEnum } from "@prisma/client";
-import type { Redis } from "ioredis";
+import { Redis } from "ioredis";
 import { PrismaService } from "../prisma/prisma.service";
 import { REDIS_CLIENT } from "../redis/redis.constants";
 import { AicAdapter } from "./adapters/aic.adapter";

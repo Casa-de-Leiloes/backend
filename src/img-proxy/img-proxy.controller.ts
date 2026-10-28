@@ -1,16 +1,10 @@
-import {
-  BadRequestException,
-  Controller,
-  Get,
-  Headers,
-  Query,
-  Res,
-} from "@nestjs/common";
 import { createHash } from "node:crypto";
+import { BadRequestException, Controller, Get, Headers, Query, Res } from "@nestjs/common";
 import type { Response } from "express";
 
 const ALLOWED_HOSTS = new Set([
   "images.metmuseum.org",
+  "www.artic.edu",
   "upload.wikimedia.org",
   "thumb.wikimedia.org",
   "cards.scryfall.io",
@@ -47,22 +41,17 @@ export class ImgProxyController {
       return;
     }
 
-    const response = await fetch(rawUrl, {
-      headers: {
-        "User-Agent":
-          "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
-        Accept: "image/webp,image/apng,image/*,*/*;q=0.8",
-        "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
-        Referer: `${parsed.protocol}//${parsed.hostname}/`,
-        "sec-ch-ua":
-          '"Not_A Brand";v="8", "Chromium";v="120", "Google Chrome";v="120"',
-        "sec-ch-ua-mobile": "?0",
-        "sec-ch-ua-platform": '"Linux"',
-        "sec-fetch-dest": "image",
-        "sec-fetch-mode": "no-cors",
-        "sec-fetch-site": "same-origin",
-      },
-    });
+    const fetchHeaders: Record<string, string> = {
+      "User-Agent":
+        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36",
+      Accept: "image/webp,image/apng,image/*,*/*;q=0.8",
+      "Accept-Language": "pt-BR,pt;q=0.9,en;q=0.8",
+      Referer: `${parsed.protocol}//${parsed.hostname}/`,
+    };
+    if (parsed.hostname === "www.artic.edu") {
+      fetchHeaders["AIC-User-Agent"] = "AuctionHouse/1.0 (https://github.com/auction-house)";
+    }
+    const response = await fetch(rawUrl, { headers: fetchHeaders });
 
     if (!response.ok) {
       res.status(response.status).end();
