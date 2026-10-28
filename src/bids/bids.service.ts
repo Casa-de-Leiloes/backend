@@ -2,6 +2,7 @@ import { createHmac } from "node:crypto";
 import { BadRequestException, Injectable } from "@nestjs/common";
 import type { Bid } from "@prisma/client";
 import { LedgerEntryKind } from "@prisma/client";
+import { LotSchedulerService } from "../lots/lot-scheduler.service";
 import { PrismaService } from "../prisma/prisma.service";
 import { hashBid } from "./bid-chain";
 
@@ -55,7 +56,10 @@ function signBid(hash: string, signingKey: string): string {
 export class BidsService {
   private readonly signingKey: string;
 
-  constructor(private readonly prisma: PrismaService) {
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly lotSchedulerService: LotSchedulerService,
+  ) {
     this.signingKey = process.env.AUDIT_SIGNING_KEY ?? "";
   }
 
@@ -157,6 +161,18 @@ export class BidsService {
           endsAt: antiSnipeExtension,
         },
       });
+
+      if (antiSnipeExtension.getTime() !== lot.endsAt.getTime()) {
+        await tx.lotExtension.create({
+          data: {
+            lotId: input.lotId,
+            bidId: bid.id,
+            previousEndsAt: lot.endsAt,
+            newEndsAt: antiSnipeExtension,
+          },
+        });
+        await this.lotSchedulerService.rescheduleClose(input.lotId, antiSnipeExtension);
+      }
 
       return bid;
     });

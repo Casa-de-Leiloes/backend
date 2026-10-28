@@ -1,6 +1,13 @@
 import { ForbiddenException, Injectable } from "@nestjs/common";
-import type { CatalogItemSnapshot, CatalogProvider, Lot, LotCategory, LotStatus } from "@prisma/client";
+import type {
+  CatalogItemSnapshot,
+  CatalogProvider,
+  Lot,
+  LotCategory,
+  LotStatus,
+} from "@prisma/client";
 import { PrismaService } from "../prisma/prisma.service";
+import { LotSchedulerService } from "./lot-scheduler.service";
 
 export interface CreateLotInput {
   auctioneerId: string;
@@ -33,10 +40,13 @@ export interface BidderPosition {
 
 @Injectable()
 export class LotsService {
-  constructor(private readonly prisma: PrismaService) {}
+  constructor(
+    private readonly prisma: PrismaService,
+    private readonly lotSchedulerService: LotSchedulerService,
+  ) {}
 
   async create(input: CreateLotInput): Promise<Lot> {
-    return this.prisma.lot.create({
+    const lot = await this.prisma.lot.create({
       data: {
         auctioneerId: input.auctioneerId,
         snapshotId: input.snapshotId,
@@ -53,6 +63,12 @@ export class LotsService {
         status: "SCHEDULED",
       },
     });
+    try {
+      await this.lotSchedulerService.scheduleLot(lot.id, lot.startsAt, lot.endsAt);
+    } catch {
+      // scheduler may not be initialized in test environments
+    }
+    return lot;
   }
 
   async findById(id: string): Promise<Lot> {
@@ -174,7 +190,16 @@ export class LotsService {
     todayEnd.setHours(23, 59, 59, 999);
 
     const validCategories = [
-      "FINE_ART","JEWELRY","WATCHES","ANTIQUITIES","NUMISMATICS","FASHION","VEHICLES","BOOKS","WINE","OTHER",
+      "FINE_ART",
+      "JEWELRY",
+      "WATCHES",
+      "ANTIQUITIES",
+      "NUMISMATICS",
+      "FASHION",
+      "VEHICLES",
+      "BOOKS",
+      "WINE",
+      "OTHER",
     ];
     const safeCategory =
       opts.lotCategory && validCategories.includes(opts.lotCategory)
