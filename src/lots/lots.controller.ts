@@ -21,7 +21,7 @@ import { RolesGuard } from "../auth/roles.guard";
 import { SessionGuard } from "../auth/session.guard";
 import { CatalogService } from "../catalog/catalog.service";
 import { SettlementService } from "../settlement/settlement.service";
-import { LotsService, type LotWithSnapshot } from "./lots.service";
+import { LotsService, LotWithSnapshot } from "./lots.service";
 
 const createLotSchema = z.object({
   snapshotId: z.string().optional(),
@@ -31,7 +31,20 @@ const createLotSchema = z.object({
   description: z.string().optional(),
   additionalImages: z.array(z.string().url()).max(10).default([]),
   category: z.enum(["ART_INSTITUTE_CHICAGO", "SCRYFALL", "OPEN_LIBRARY"]),
-  lotCategory: z.enum(["FINE_ART", "JEWELRY", "WATCHES", "ANTIQUITIES", "NUMISMATICS", "FASHION", "VEHICLES", "BOOKS", "WINE", "OTHER"]).optional(),
+  lotCategory: z
+    .enum([
+      "FINE_ART",
+      "JEWELRY",
+      "WATCHES",
+      "ANTIQUITIES",
+      "NUMISMATICS",
+      "FASHION",
+      "VEHICLES",
+      "BOOKS",
+      "WINE",
+      "OTHER",
+    ])
+    .optional(),
   startingBidCents: z.number().int().positive(),
   minIncrementCents: z.number().int().positive(),
   startsAt: z.string().datetime(),
@@ -55,6 +68,9 @@ function serializeLotWithSnapshot(lot: LotWithSnapshot) {
     currentBidCents: lot.currentBidCents?.toString() ?? null,
     imageUrl: lot.snapshot?.sourceImageUrl ?? null,
     additionalImages: lot.additionalImages ?? [],
+    attributes: (lot.snapshot?.attributes ?? {}) as Record<string, string | number | boolean | null>,
+    catalogExternalId: lot.snapshot?.externalId ?? null,
+    catalogProvider: lot.snapshot?.provider ?? null,
     snapshot: undefined,
   };
 }
