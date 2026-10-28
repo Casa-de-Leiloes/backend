@@ -72,18 +72,25 @@ describe("BidsService", () => {
     svc = module.get(BidsService);
   });
 
-  it("rejects bid on non-LIVE lot", async () => {
+  it("rejects bid on SCHEDULED lot with LOT_NOT_STARTED", async () => {
     mockTx.lot.findUnique.mockResolvedValue(makeLot({ status: "SCHEDULED" }));
     await expect(
       svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1000n }),
-    ).rejects.toThrow("LOT_NOT_LIVE");
+    ).rejects.toThrow("LOT_NOT_STARTED");
   });
 
-  it("rejects bid on closed (past endsAt) lot", async () => {
+  it("rejects bid on CLOSED lot with LOT_ALREADY_CLOSED", async () => {
+    mockTx.lot.findUnique.mockResolvedValue(makeLot({ status: "CLOSED", endsAt: pastDate(1) }));
+    await expect(
+      svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1000n }),
+    ).rejects.toThrow("LOT_ALREADY_CLOSED");
+  });
+
+  it("rejects bid on LIVE lot past endsAt with LOT_ALREADY_CLOSED", async () => {
     mockTx.lot.findUnique.mockResolvedValue(makeLot({ endsAt: pastDate(1) }));
     await expect(
       svc.placeBid({ lotId: "lot-1", bidderId: "user-1", walletId: "w-1", amountCents: 1000n }),
-    ).rejects.toThrow("LOT_NOT_LIVE");
+    ).rejects.toThrow("LOT_ALREADY_CLOSED");
   });
 
   it("rejects bid below starting bid when no current bid", async () => {

@@ -68,7 +68,16 @@ export class BidsService {
       const lot = await tx.lot.findUnique({ where: { id: input.lotId } });
       const now = new Date();
 
-      if (lot?.status !== "LIVE" || lot.endsAt <= now) {
+      if (!lot || lot.status === "CANCELLED") {
+        throw new BadRequestException("LOT_NOT_LIVE");
+      }
+      if (lot.status === "SCHEDULED") {
+        throw new BadRequestException("LOT_NOT_STARTED");
+      }
+      if (lot.status === "CLOSED" || lot.endsAt <= now) {
+        throw new BadRequestException("LOT_ALREADY_CLOSED");
+      }
+      if (lot.status !== "LIVE") {
         throw new BadRequestException("LOT_NOT_LIVE");
       }
 
