@@ -23,10 +23,13 @@ export class LotSchedulerService implements OnModuleInit, OnModuleDestroy {
     private readonly settlementService: SettlementService,
   ) {}
 
-  onModuleInit() {
+  async onModuleInit() {
     const redisUrl = process.env.REDIS_URL ?? "redis://localhost:6379";
     const connection = { url: redisUrl, maxRetriesPerRequest: null as null };
     this.queue = new Queue<LotJobData>(QUEUE_NAME, { connection });
+
+    // Catch-up: close any LIVE/SCHEDULED lots whose time has already passed
+    await this.catchUpExpiredLots();
 
     this.worker = new Worker<LotJobData>(
       QUEUE_NAME,
@@ -56,6 +59,34 @@ export class LotSchedulerService implements OnModuleInit, OnModuleDestroy {
   async onModuleDestroy() {
     await this.worker.close();
     await this.queue.close();
+  }
+
+  private async catchUpExpiredLots(): Promise<void> {
+    const now = new Date();
+
+    // Open SCHEDULED lots whose startsAt has passed
+    await this.prisma.lot.updateMany({
+      where: { status: "SCHEDULED", startsAt: { lte: now }, endsAt: { gt: now } },
+      data: { status: "LIVE" },
+    });
+
+    // Close LIVE lots (and SCHEDULED lots) whose endsAt has passed
+    const expired = await this.prisma.lot.findMany({
+      where: { status: { in: ["LIVE", "SCHEDULED"] }, endsAt: { lte: now } },
+      select: { id: true },
+    });
+
+    for (const lot of expired) {
+      await this.prisma.lot.updateMany({
+        where: { id: lot.id, status: { in: ["LIVE", "SCHEDULED"] } },
+        data: { status: "CLOSED" },
+      });
+      try {
+        await this.settlementService.settleLot(lot.id);
+      } catch {
+        // no bids or already settled
+      }
+    }
   }
 
   async scheduleLot(lotId: string, startsAt: Date, endsAt: Date): Promise<void> {
