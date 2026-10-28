@@ -38,10 +38,14 @@ Real-time online auction platform built as a technical test for Verzel's Elite D
 - [Bun](https://bun.sh) ≥ 1.4
 - [Docker](https://docker.com) + Docker Compose
 
-### 1. Start infrastructure
+### 1. Start infrastructure (local only)
 
 ```bash
-docker compose up -d postgres redis
+# Starts postgres + redis + api together
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
+
+# Or just infra, if running api with bun locally:
+docker compose -f docker-compose.local.yml up -d postgres redis
 ```
 
 ### 2. Configure environment
@@ -163,11 +167,16 @@ bun run test:watch
 bun run test:cov
 ```
 
-## Docker (production)
+## Docker
+
+### Local (with postgres + redis)
 
 ```bash
-# Full stack
-docker compose up --build
+docker compose -f docker-compose.yml -f docker-compose.local.yml up --build
 ```
 
-The `docker-compose.yml` starts postgres, redis, and the API with automatic migration on boot.
+### Production (Dokploy)
+
+`docker-compose.yml` only declares the `api` service — no databases.
+In Dokploy, create separate **PostgreSQL** and **Redis** services, then set
+`DATABASE_URL` and `REDIS_URL` as environment variables on the API app.

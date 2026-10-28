@@ -30,22 +30,17 @@ services:
       retries: 5
 
   api:
-    build:
-      context: .
-      dockerfile: Dockerfile
-    restart: unless-stopped
-    env_file: .env.local
-    ports:
-      - "3000:3000"
-    volumes:
-      - storage_data:/app/storage
+    environment:
+      DATABASE_URL: postgresql://auction:auction@postgres:5432/auction_house
+      REDIS_URL: redis://redis:6379
     depends_on:
       postgres:
         condition: service_healthy
       redis:
         condition: service_healthy
+    ports:
+      - "3000:3000"
 
 volumes:
   postgres_data:
   redis_data:
-  storage_data:

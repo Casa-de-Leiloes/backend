@@ -1,30 +1,4 @@
 services:
-  postgres:
-    image: postgres:16-alpine
-    restart: unless-stopped
-    environment:
-      POSTGRES_USER: auction
-      POSTGRES_PASSWORD: auction
-      POSTGRES_DB: auction_house
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-    healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U auction -d auction_house"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
-  redis:
-    image: redis:7-alpine
-    restart: unless-stopped
-    volumes:
-      - redis_data:/data
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 10s
-      timeout: 5s
-      retries: 5
-
   api:
     build:
       context: .
@@ -36,22 +10,12 @@ services:
     environment:
       NODE_ENV: production
       PORT: 3000
-      DATABASE_URL: postgresql://auction:auction@postgres:5432/auction_house
-      REDIS_URL: redis://redis:6379
+      DATABASE_URL: ${DATABASE_URL}
+      REDIS_URL: ${REDIS_URL}
       FERNET_KEYS: ${FERNET_KEYS}
       EMAIL_LOOKUP_KEY: ${EMAIL_LOOKUP_KEY}
       PSEUDONYM_KEY: ${PSEUDONYM_KEY}
       AUDIT_SIGNING_KEY: ${AUDIT_SIGNING_KEY}
       BETTER_AUTH_SECRET: ${BETTER_AUTH_SECRET}
-      BETTER_AUTH_URL: ${BETTER_AUTH_URL:-http://localhost}
-      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN:-http://localhost}
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-
-
-volumes:
-  postgres_data:
-  redis_data:
+      BETTER_AUTH_URL: ${BETTER_AUTH_URL}
+      FRONTEND_ORIGIN: ${FRONTEND_ORIGIN}
