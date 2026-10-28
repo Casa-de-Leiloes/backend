@@ -5,6 +5,7 @@ COPY package.json bun.lock ./
 RUN bun install --frozen-lockfile
 
 COPY . .
+RUN bunx prisma generate
 RUN bun run build
 
 FROM node:22-slim AS runner
@@ -16,8 +17,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends openssl && rm -
 COPY --from=builder /app/node_modules ./node_modules
 COPY --from=builder /app/dist ./dist
 COPY --from=builder /app/prisma ./prisma
+COPY --from=builder /app/prisma.config.ts ./
+COPY --from=builder /app/tsconfig.json ./
 COPY --from=builder /app/package.json ./
 
 EXPOSE 3000
 
-CMD ["sh", "-c", "node -e \"require('@prisma/client')\" && bunx prisma migrate deploy && node dist/main.js"]
+CMD ["sh", "-c", "node node_modules/.bin/prisma migrate deploy && node dist/main.js"]

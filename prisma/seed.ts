@@ -150,31 +150,106 @@ async function main() {
     status: "LIVE" | "SCHEDULED" | "CLOSED";
     offsetMs: number;
     startingBidCents: bigint;
-    lotCategory: "FINE_ART" | "JEWELRY" | "WATCHES" | "ANTIQUITIES" | "NUMISMATICS" | "FASHION" | "VEHICLES" | "BOOKS" | "WINE" | "OTHER";
+    lotCategory:
+      | "FINE_ART"
+      | "JEWELRY"
+      | "WATCHES"
+      | "ANTIQUITIES"
+      | "NUMISMATICS"
+      | "FASHION"
+      | "VEHICLES"
+      | "BOOKS"
+      | "WINE"
+      | "OTHER";
   }> = [
-    { id: "seed-lot-1", metId: 436535,  status: "LIVE",      offsetMs: 0,              startingBidCents: 100000n, lotCategory: "FINE_ART" }, // Wheat Field with Cypresses — Van Gogh
-    { id: "seed-lot-2", metId: 437881,  status: "LIVE",      offsetMs: 0,              startingBidCents:  80000n, lotCategory: "FINE_ART" }, // Young Woman with Water Pitcher — Vermeer
-    { id: "seed-lot-3", metId: 45434,   status: "SCHEDULED", offsetMs: 2 * 3_600_000,  startingBidCents:  50000n, lotCategory: "FINE_ART" }, // Under the Wave off Kanagawa — Hokusai
-    { id: "seed-lot-4", metId: 11417,   status: "SCHEDULED", offsetMs: 5 * 3_600_000,  startingBidCents: 120000n, lotCategory: "FINE_ART" }, // Washington Crossing — Leutze
-    { id: "seed-lot-5", metId: 437980,  status: "SCHEDULED", offsetMs: 8 * 3_600_000,  startingBidCents:  90000n, lotCategory: "FINE_ART" }, // Cypresses — Van Gogh
-    { id: "seed-lot-6", metId: 436121,  status: "SCHEDULED", offsetMs: 24 * 3_600_000, startingBidCents:  75000n, lotCategory: "FINE_ART" }, // Woman Seated beside Vase — Degas
-    { id: "seed-lot-7", metId: 437984,  status: "SCHEDULED", offsetMs: 48 * 3_600_000, startingBidCents:  60000n, lotCategory: "FINE_ART" }, // La Berceuse — Van Gogh
-    { id: "seed-lot-8", metId: 436529,  status: "CLOSED",    offsetMs: -3 * 3_600_000, startingBidCents:  85000n, lotCategory: "FINE_ART" }, // L'Arlésienne — Van Gogh
-    { id: "seed-lot-9", metId: 10481,   status: "CLOSED",    offsetMs: -6 * 3_600_000, startingBidCents:  70000n, lotCategory: "FINE_ART" }, // Heart of the Andes — Church
+    {
+      id: "seed-lot-1",
+      metId: 436535,
+      status: "LIVE",
+      offsetMs: 0,
+      startingBidCents: 100000n,
+      lotCategory: "FINE_ART",
+    }, // Wheat Field with Cypresses — Van Gogh
+    {
+      id: "seed-lot-2",
+      metId: 437881,
+      status: "LIVE",
+      offsetMs: 0,
+      startingBidCents: 80000n,
+      lotCategory: "FINE_ART",
+    }, // Young Woman with Water Pitcher — Vermeer
+    {
+      id: "seed-lot-3",
+      metId: 45434,
+      status: "SCHEDULED",
+      offsetMs: 2 * 3_600_000,
+      startingBidCents: 50000n,
+      lotCategory: "FINE_ART",
+    }, // Under the Wave off Kanagawa — Hokusai
+    {
+      id: "seed-lot-4",
+      metId: 11417,
+      status: "SCHEDULED",
+      offsetMs: 5 * 3_600_000,
+      startingBidCents: 120000n,
+      lotCategory: "FINE_ART",
+    }, // Washington Crossing — Leutze
+    {
+      id: "seed-lot-5",
+      metId: 437980,
+      status: "SCHEDULED",
+      offsetMs: 8 * 3_600_000,
+      startingBidCents: 90000n,
+      lotCategory: "FINE_ART",
+    }, // Cypresses — Van Gogh
+    {
+      id: "seed-lot-6",
+      metId: 436121,
+      status: "SCHEDULED",
+      offsetMs: 24 * 3_600_000,
+      startingBidCents: 75000n,
+      lotCategory: "FINE_ART",
+    }, // Woman Seated beside Vase — Degas
+    {
+      id: "seed-lot-7",
+      metId: 437984,
+      status: "SCHEDULED",
+      offsetMs: 48 * 3_600_000,
+      startingBidCents: 60000n,
+      lotCategory: "FINE_ART",
+    }, // La Berceuse — Van Gogh
+    {
+      id: "seed-lot-8",
+      metId: 436529,
+      status: "CLOSED",
+      offsetMs: -3 * 3_600_000,
+      startingBidCents: 85000n,
+      lotCategory: "FINE_ART",
+    }, // L'Arlésienne — Van Gogh
+    {
+      id: "seed-lot-9",
+      metId: 10481,
+      status: "CLOSED",
+      offsetMs: -6 * 3_600_000,
+      startingBidCents: 70000n,
+      lotCategory: "FINE_ART",
+    }, // Heart of the Andes — Church
   ];
 
   console.log(`Fetching ${LOT_CONFIGS.length} artworks from Met Museum API...`);
   const snapshotByLotId = new Map<string, { id: string; title: string }>();
   for (const cfg of LOT_CONFIGS) {
     const artwork = await fetchMetArtwork(cfg.metId);
-    if (!artwork || !artwork.isPublicDomain) {
+    if (!artwork?.isPublicDomain) {
       console.warn(`  ${cfg.metId} not found or not public domain, skipping ${cfg.id}`);
       continue;
     }
     const sourceImageUrl = artwork.primaryImage || undefined;
     console.log(`  ${artwork.title.slice(0, 40)}: ${sourceImageUrl ? "✓" : "✗"}`);
     const snap = await prisma.catalogItemSnapshot.upsert({
-      where: { provider_externalId: { provider: "ART_INSTITUTE_CHICAGO", externalId: String(cfg.metId) } },
+      where: {
+        provider_externalId: { provider: "ART_INSTITUTE_CHICAGO", externalId: String(cfg.metId) },
+      },
       create: {
         provider: "ART_INSTITUTE_CHICAGO",
         externalId: String(cfg.metId),
@@ -307,12 +382,14 @@ async function main() {
     const snapRef = snapshotByLotId.get(cfg.id);
     if (!snapRef) continue;
 
-    const lotStartsAt = cfg.status === "CLOSED"
-      ? new Date(now.getTime() + cfg.offsetMs - 3_600_000)
-      : new Date(now.getTime() + cfg.offsetMs);
-    const lotEndsAt = cfg.status === "CLOSED"
-      ? new Date(now.getTime() + cfg.offsetMs)
-      : new Date(now.getTime() + cfg.offsetMs + 4 * 3_600_000);
+    const lotStartsAt =
+      cfg.status === "CLOSED"
+        ? new Date(now.getTime() + cfg.offsetMs - 3_600_000)
+        : new Date(now.getTime() + cfg.offsetMs);
+    const lotEndsAt =
+      cfg.status === "CLOSED"
+        ? new Date(now.getTime() + cfg.offsetMs)
+        : new Date(now.getTime() + cfg.offsetMs + 4 * 3_600_000);
 
     await prisma.lot.upsert({
       where: { id: cfg.id },
