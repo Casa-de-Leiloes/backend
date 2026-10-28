@@ -6,8 +6,8 @@ import type {
   LotCategory,
   LotStatus,
 } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
-import { LotSchedulerService } from "./lot-scheduler.service";
+import type { PrismaService } from "../prisma/prisma.service";
+import type { LotSchedulerService } from "./lot-scheduler.service";
 
 export interface CreateLotInput {
   auctioneerId: string;

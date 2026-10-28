@@ -16,8 +16,8 @@ import type { BetterAuthUser } from "../auth/auth.types";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { SessionGuard } from "../auth/session.guard";
-import { WalletService } from "../wallet/wallet.service";
-import { BidsService } from "./bids.service";
+import type { WalletService } from "../wallet/wallet.service";
+import type { BidsService } from "./bids.service";
 
 const placeBidSchema = z.object({
   amountCents: z.number().int().positive(),

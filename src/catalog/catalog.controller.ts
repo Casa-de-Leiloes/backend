@@ -1,5 +1,5 @@
 import { BadRequestException, Controller, Get, Query } from "@nestjs/common";
-import { CatalogService } from "./catalog.service";
+import type { CatalogService } from "./catalog.service";
 
 @Controller("catalog")
 export class CatalogController {

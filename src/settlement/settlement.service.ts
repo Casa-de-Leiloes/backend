@@ -1,7 +1,7 @@
 import { createHmac, randomBytes } from "node:crypto";
 import { Injectable } from "@nestjs/common";
 import type { Receipt } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
+import type { PrismaService } from "../prisma/prisma.service";
 
 @Injectable()
 export class SettlementService {

@@ -62,7 +62,10 @@ describe("ImgProxyController", () => {
 
     await ctrl.proxy(url, res as never);
     expect(res.setHeader).toHaveBeenCalledWith("Content-Type", "image/jpeg");
-    expect(res.setHeader).toHaveBeenCalledWith("Cache-Control", "public, max-age=31536000, immutable");
+    expect(res.setHeader).toHaveBeenCalledWith(
+      "Cache-Control",
+      "public, max-age=31536000, immutable",
+    );
     expect(res.end).toHaveBeenCalled();
   });
 

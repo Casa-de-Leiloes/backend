@@ -1,9 +1,9 @@
 import { Inject, Injectable, type OnModuleDestroy, type OnModuleInit } from "@nestjs/common";
 import { type Job, Queue, Worker } from "bullmq";
 import type Redis from "ioredis";
-import { PrismaService } from "../prisma/prisma.service";
+import type { PrismaService } from "../prisma/prisma.service";
 import { REDIS_CLIENT } from "../redis/redis.constants";
-import { SettlementService } from "../settlement/settlement.service";
+import type { SettlementService } from "../settlement/settlement.service";
 
 const QUEUE_NAME = "lot-lifecycle";
 

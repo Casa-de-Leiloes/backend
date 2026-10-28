@@ -19,9 +19,9 @@ import type { BetterAuthUser } from "../auth/auth.types";
 import { Roles } from "../auth/roles.decorator";
 import { RolesGuard } from "../auth/roles.guard";
 import { SessionGuard } from "../auth/session.guard";
-import { CatalogService } from "../catalog/catalog.service";
-import { SettlementService } from "../settlement/settlement.service";
-import { LotsService, LotWithSnapshot } from "./lots.service";
+import type { CatalogService } from "../catalog/catalog.service";
+import type { SettlementService } from "../settlement/settlement.service";
+import type { LotsService, LotWithSnapshot } from "./lots.service";
 
 const createLotSchema = z.object({
   snapshotId: z.string().optional(),
@@ -68,7 +68,10 @@ function serializeLotWithSnapshot(lot: LotWithSnapshot) {
     currentBidCents: lot.currentBidCents?.toString() ?? null,
     imageUrl: lot.snapshot?.sourceImageUrl ?? null,
     additionalImages: lot.additionalImages ?? [],
-    attributes: (lot.snapshot?.attributes ?? {}) as Record<string, string | number | boolean | null>,
+    attributes: (lot.snapshot?.attributes ?? {}) as Record<
+      string,
+      string | number | boolean | null
+    >,
     catalogExternalId: lot.snapshot?.externalId ?? null,
     catalogProvider: lot.snapshot?.provider ?? null,
     snapshot: undefined,

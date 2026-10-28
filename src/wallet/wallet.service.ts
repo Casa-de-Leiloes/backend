@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable } from "@nestjs/common";
 import type { WalletLedgerEntry } from "@prisma/client";
 import { LedgerEntryKind } from "@prisma/client";
-import { PrismaService } from "../prisma/prisma.service";
+import type { PrismaService } from "../prisma/prisma.service";
 
 export interface WalletBalance {
   totalCents: bigint;

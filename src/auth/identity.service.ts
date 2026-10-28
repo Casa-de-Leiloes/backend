@@ -6,7 +6,7 @@ import {
   timingSafeEqual,
 } from "node:crypto";
 import { Injectable, Optional } from "@nestjs/common";
-import { ConfigService } from "@nestjs/config";
+import type { ConfigService } from "@nestjs/config";
 import type { AppEnv } from "../config/env.schema";
 
 const FERNET_VERSION = 0x80;

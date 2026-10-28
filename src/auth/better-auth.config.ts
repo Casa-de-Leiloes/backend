@@ -2,7 +2,7 @@ import type { PrismaClient } from "@prisma/client";
 import * as argon2 from "argon2";
 import { betterAuth } from "better-auth";
 import { prismaAdapter } from "better-auth/adapters/prisma";
-import { IdentityService } from "./identity.service";
+import type { IdentityService } from "./identity.service";
 
 export function createBetterAuth(
   prisma: PrismaClient,

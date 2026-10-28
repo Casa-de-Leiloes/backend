@@ -1,6 +1,6 @@
 import { Test } from "@nestjs/testing";
-import { REDIS_CLIENT } from "../redis/redis.constants";
 import { PrismaService } from "../prisma/prisma.service";
+import { REDIS_CLIENT } from "../redis/redis.constants";
 import { SettlementService } from "../settlement/settlement.service";
 import { LotSchedulerService } from "./lot-scheduler.service";
 
@@ -18,12 +18,17 @@ jest.mock("bullmq", () => ({
     close: mockQueueClose,
     getJob: mockGetJob,
   })),
-  Worker: jest.fn().mockImplementation(
-    (_name: string, handler: (job: { data: { lotId: string; action: string } }) => Promise<void>) => {
-      workerJobHandler = handler;
-      return { close: mockWorkerClose };
-    },
-  ),
+  Worker: jest
+    .fn()
+    .mockImplementation(
+      (
+        _name: string,
+        handler: (job: { data: { lotId: string; action: string } }) => Promise<void>,
+      ) => {
+        workerJobHandler = handler;
+        return { close: mockWorkerClose };
+      },
+    ),
 }));
 
 const mockPrisma = {
@@ -117,12 +122,8 @@ describe("LotSchedulerService", () => {
     it("uses delay=0 for lots that already started/ended", async () => {
       const pastTime = new Date(Date.now() - 10_000);
       await svc.scheduleLot("lot-past", pastTime, pastTime);
-      const openCall = mockAdd.mock.calls.find(
-        (c: unknown[]) => (c[0] as string) === "open",
-      );
-      const closeCall = mockAdd.mock.calls.find(
-        (c: unknown[]) => (c[0] as string) === "close",
-      );
+      const openCall = mockAdd.mock.calls.find((c: unknown[]) => (c[0] as string) === "open");
+      const closeCall = mockAdd.mock.calls.find((c: unknown[]) => (c[0] as string) === "close");
       expect((openCall?.[2] as { delay: number })?.delay).toBe(0);
       expect((closeCall?.[2] as { delay: number })?.delay).toBe(0);
     });
@@ -157,7 +158,7 @@ describe("LotSchedulerService", () => {
   describe("worker job handler", () => {
     it("opens SCHEDULED lot on open action", async () => {
       expect(workerJobHandler).not.toBeNull();
-      await workerJobHandler!({ data: { lotId: "lot-1", action: "open" } });
+      await workerJobHandler?.({ data: { lotId: "lot-1", action: "open" } });
       expect(mockPrisma.lot.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "lot-1", status: "SCHEDULED" },
@@ -167,7 +168,7 @@ describe("LotSchedulerService", () => {
     });
 
     it("closes LIVE lot and settles on close action", async () => {
-      await workerJobHandler!({ data: { lotId: "lot-1", action: "close" } });
+      await workerJobHandler?.({ data: { lotId: "lot-1", action: "close" } });
       expect(mockPrisma.lot.updateMany).toHaveBeenCalledWith(
         expect.objectContaining({
           where: { id: "lot-1", status: "LIVE" },
@@ -180,7 +181,7 @@ describe("LotSchedulerService", () => {
     it("swallows settlement errors on close action", async () => {
       mockSettlement.settleLot.mockRejectedValueOnce(new Error("NO_WINNER"));
       await expect(
-        workerJobHandler!({ data: { lotId: "lot-no-bids", action: "close" } }),
+        workerJobHandler?.({ data: { lotId: "lot-no-bids", action: "close" } }),
       ).resolves.not.toThrow();
     });
   });
